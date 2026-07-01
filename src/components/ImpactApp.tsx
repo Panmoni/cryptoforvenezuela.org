@@ -145,7 +145,8 @@ export default function ImpactApp() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-start",
+            overflowY: "auto",
             padding: 20,
             zIndex: 100,
             cursor: "zoom-out",
@@ -158,7 +159,7 @@ export default function ImpactApp() {
               flexWrap: "wrap",
               justifyContent: "center",
               maxWidth: "90vw",
-              maxHeight: "75vh",
+              flexShrink: 0,
             }}
           >
             {lightbox.photos.map((photo) => (
@@ -168,10 +169,11 @@ export default function ImpactApp() {
                 alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
                 style={{
                   maxWidth: "100%",
-                  maxHeight: "75vh",
+                  maxHeight: lightbox.photos.length > 1 ? "50vh" : "65vh",
                   width: lightbox.photos.length > 1 ? "auto" : undefined,
                   borderRadius: 8,
                   objectFit: "contain",
+                  display: "block",
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
