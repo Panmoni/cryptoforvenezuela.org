@@ -17,14 +17,20 @@ const EXPLORERS: Record<InflowRow["chain"], (tx: string) => string> = {
 export default function ReceivedApp() {
   const [recent, setRecent] = useState<InflowRow[] | null>(null);
   const [totals, setTotals] = useState<Record<string, number> | null>(null);
+  const [valuation, setValuation] = useState<{ usd: number; ves: number } | null>(null);
 
   useEffect(() => {
-    fetch("/api/inflows")
-      .then((r) => r.json<{ recent: InflowRow[]; totals: Record<string, number> }>())
-      .then((d) => {
-        setRecent(d.recent);
-        setTotals(d.totals);
-      });
+    const load = () =>
+      fetch("/api/inflows")
+        .then((r) => r.json<{ recent: InflowRow[]; totals: Record<string, number>; valuation: { usd: number; ves: number } | null }>())
+        .then((d) => {
+          setRecent(d.recent);
+          setTotals(d.totals);
+          setValuation(d.valuation);
+        });
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -43,18 +49,32 @@ export default function ReceivedApp() {
             <p style={{ color: "var(--text-dim)" }}>Nothing confirmed on-chain yet.</p>
           )}
         </div>
+        {valuation && (
+          <p style={{ color: "var(--text-dim)", marginTop: 12 }}>
+            ≈ ${valuation.usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD · Bs.{" "}
+            {valuation.ves.toLocaleString(undefined, { maximumFractionDigits: 0 })} VES
+          </p>
+        )}
       </section>
 
       <section className="section">
         <h2>Recent transfers</h2>
         {recent?.map((row) => (
-          <div key={row.tx_hash} className="card" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+          <div key={row.tx_hash} className="card" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>
               {row.amount} {row.token} on {row.chain}
             </span>
-            <a href={EXPLORERS[row.chain](row.tx_hash)} target="_blank" rel="noreferrer">
-              view tx
-            </a>
+            <span style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
+                {new Date(row.confirmed_at).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+              <a href={EXPLORERS[row.chain](row.tx_hash)} target="_blank" rel="noreferrer">
+                view tx
+              </a>
+            </span>
           </div>
         ))}
       </section>
