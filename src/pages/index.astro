@@ -2,6 +2,8 @@
 export const prerender = true;
 import Layout from "../layouts/Layout.astro";
 import DonationWidget from "../components/DonationWidget";
+import ImpactApp from "../components/ImpactApp";
+import ReceivedApp from "../components/ReceivedApp";
 // ConnectSend (Phase 6, wallet-connect-and-send) is built but not wired in
 // for iteration 1 — it needs a Reown project ID we don't have yet. The
 // component still lives in src/components/ConnectSend.tsx; re-add the
@@ -9,13 +11,15 @@ import DonationWidget from "../components/DonationWidget";
 // exists. The address+QR widget below is the full donation path for now.
 ---
 
-<Layout title="Donate">
-  <section class="hero">
+<Layout title="Crypto for Venezuela">
+  <section id="donate" class="hero">
     <h1>Direct relief for Venezuela, wallet to wallet.</h1>
     <p>
-      On June 24, 2026, twin M7.2 and M7.5 earthquakes hit Venezuela. A friend of mine is on the ground in
-      Caracas, buying food, hygiene supplies, and hospital materials with whatever comes in — children
-      first. Every dollar you send goes straight to his wallet. Nothing passes through anyone in between.
+      On June 24, 2026, twin M7.2 and M7.5 earthquakes hit Venezuela. A friend of mine leads a group of
+      volunteers on the ground in Caracas, buying food, hygiene supplies, and hospital materials with
+      whatever comes in — reaching families sleeping in the street and children left without parents after
+      the quake. Every dollar you send goes straight to his wallet. Nothing passes through anyone in
+      between.
     </p>
   </section>
 
@@ -24,11 +28,69 @@ import DonationWidget from "../components/DonationWidget";
        SSR/prerender pass if hydrated normally. -->
   <DonationWidget client:only="react" />
 
-  <section class="section">
-    <h2>Where it's going</h2>
-    <p style="color: var(--text-dim)">
-      Photo-verified impact tracking is coming online shortly — every dollar received will link to the
-      receipts and photos it paid for. <a href="/impact">See the impact log</a>.
+  <section id="impact" class="section">
+    <h2>Every number here is a photo.</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;">
+      These counters are a straight sum over deliveries a human personally reviewed and approved — click any
+      number to see the photos behind it.
     </p>
   </section>
+  <ImpactApp client:load />
+
+  <section id="received" class="section">
+    <h2>What's come in on-chain</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;">
+      This data comes straight from Solana and Ethereum — anyone can verify it independently on a block
+      explorer. Shown here next to the impact log above so you can see money in vs. aid delivered.
+    </p>
+  </section>
+  <ReceivedApp client:load />
+
+  <div id="about">
+    <section class="section">
+      <h2>How this works</h2>
+    </section>
+
+    <section class="section">
+      <h3>Wallet to wallet, nothing in between</h3>
+      <p>
+        This site displays two addresses — one on Solana, one on Ethereum — that belong to a friend of mine
+        who leads a group of volunteers in Caracas. When you send funds, they go directly to his wallet, and
+        he and the group use it to buy supplies on the ground. This site, and I, never touch the money.
+        There is no pooled account, no smart contract holding funds, no intermediate custody of any kind, no
+        middlemen — just funding straight from person to person to help children and adults in need on the
+        streets of Venezuela.
+      </p>
+    </section>
+
+    <section class="section">
+      <h3>What this isn't</h3>
+      <ul style="color: var(--text-dim)">
+        <li>Not a registered charity — no tax receipt, no 501(c)(3).</li>
+        <li>No KYC, no fiat on/off-ramp — this is crypto, wallet to wallet.</li>
+        <li>No pooled or custodial wallet — funds never pass through anything I control.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h3>Verifying the addresses</h3>
+      <p>
+        Address integrity is the single highest-stakes property of this whole project — a swapped address
+        means your donation reaches a clone, not him or the volunteers he works with. The two addresses
+        shown above were published once,
+        together, from an established personal channel I've used for years, and haven't changed since. The
+        "Verify this address" panel links to that post and to a block explorer so you can check
+        independently before sending anything.
+      </p>
+    </section>
+
+    <section class="section">
+      <h3>Impact tracking</h3>
+      <p>
+        Photos of purchases and deliveries come in from the ground via Telegram. Every single one is
+        manually reviewed and approved before it's published — nothing goes live automatically. Approved
+        photos back every number in the impact section above, and every number links back to its evidence.
+      </p>
+    </section>
+  </div>
 </Layout>

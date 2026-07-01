@@ -29,9 +29,12 @@ export type MediaStatus = z.infer<typeof MediaStatusSchema>;
 
 /** Body for POST /api/admin/approve — what the admin actually confirmed,
  * which may differ from the model's suggestion (they can edit any field
- * before approving). This is the shape that becomes `impact` rows. */
+ * before approving). `mediaIds` covers every photo in the post (a Telegram
+ * album shares one review card, one category, one set of items — approving
+ * writes `impact` rows once, against the first id, so a multi-photo post
+ * never double-counts). */
 export const ApproveRequestSchema = z.object({
-  mediaId: z.string().min(1),
+  mediaIds: z.array(z.string().min(1)).min(1),
   category: z.enum(CATEGORIES),
   items: z
     .array(
@@ -45,7 +48,7 @@ export const ApproveRequestSchema = z.object({
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
 
 export const RejectRequestSchema = z.object({
-  mediaId: z.string().min(1),
+  mediaIds: z.array(z.string().min(1)).min(1),
   reason: z.string().optional(),
 });
 export type RejectRequest = z.infer<typeof RejectRequestSchema>;

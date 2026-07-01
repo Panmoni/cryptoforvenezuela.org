@@ -16,8 +16,6 @@ export const POST: APIRoute = async ({ request }) => {
   if (!result.found) {
     return Response.json({ error: "not found" }, { status: 404 });
   }
-  if (result.r2PublicKey) {
-    await env.MEDIA_PUBLIC.delete(result.r2PublicKey);
-  }
+  await Promise.all(result.r2PublicKeys.map((key) => env.MEDIA_PUBLIC.delete(key)));
   return Response.json({ ok: true });
 };

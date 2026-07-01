@@ -4,8 +4,37 @@ import { ADDRESS_ALERT, CANONICAL_ANCHOR_URL, RECIPIENT_ADDRESSES, type ChainKey
 
 const SUGGESTED_USD = [5, 20, 50];
 
+function ChainIcon({ chain }: { chain: ChainKey }) {
+  if (chain === "solana") {
+    return (
+      <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <defs>
+          <linearGradient id="solana-grad" x1="2" y1="26" x2="30" y2="6">
+            <stop offset="0" stopColor="#9945FF" />
+            <stop offset="1" stopColor="#14F195" />
+          </linearGradient>
+        </defs>
+        <path d="M7 21.5L10.5 18H27L23.5 21.5Z" fill="url(#solana-grad)" />
+        <path d="M7 10.5L10.5 7H27L23.5 10.5Z" fill="url(#solana-grad)" />
+        <path d="M23.5 16L27 12.5H10.5L7 16Z" fill="url(#solana-grad)" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M16 1L16 12.8L26.5 17.8Z" fill="#8A92B2" />
+      <path d="M16 1L5.5 17.8L16 12.8Z" fill="#62688F" />
+      <path d="M16 20.2L16 30.9L26.5 20Z" fill="#8A92B2" />
+      <path d="M16 30.9L16 20.2L5.5 20Z" fill="#62688F" />
+      <path d="M16 18.4L26.5 17.8L16 12.8Z" fill="#454A75" />
+      <path d="M5.5 17.8L16 18.4L16 12.8Z" fill="#8A92B2" />
+    </svg>
+  );
+}
+
 export default function DonationWidget() {
   const [chain, setChain] = useState<ChainKey>("solana");
+  const [sendingToken, setSendingToken] = useState(false);
   const [copied, setCopied] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,13 +65,39 @@ export default function DonationWidget() {
             key={key}
             type="button"
             className={chain === key ? "button" : "button secondary"}
-            onClick={() => setChain(key)}
+            onClick={() => {
+              setChain(key);
+              setSendingToken(false);
+            }}
             aria-pressed={chain === key}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
+            <ChainIcon chain={key} />
             {RECIPIENT_ADDRESSES[key].chainLabel}
           </button>
         ))}
       </div>
+
+      {chain === "solana" && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <button
+            type="button"
+            className={!sendingToken ? "button" : "button secondary"}
+            onClick={() => setSendingToken(false)}
+            aria-pressed={!sendingToken}
+          >
+            SOL
+          </button>
+          <button
+            type="button"
+            className={sendingToken ? "button" : "button secondary"}
+            onClick={() => setSendingToken(true)}
+            aria-pressed={sendingToken}
+          >
+            Token
+          </button>
+        </div>
+      )}
 
       {alerted ? (
         <div className="alert-banner" role="alert">
@@ -60,6 +115,13 @@ export default function DonationWidget() {
               <button type="button" className="button" onClick={copyAddress}>
                 {copied ? "Copied" : "Copy address"}
               </button>
+
+              {chain === "solana" && sendingToken && (
+                <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 12 }}>
+                  Same address for any SPL token — USDC, USDT, and others all work. Pick the token in your
+                  wallet and verify its contract there before confirming.
+                </p>
+              )}
 
               <div style={{ marginTop: 16 }}>
                 <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "0 0 8px" }}>Suggested amounts:</p>

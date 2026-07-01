@@ -9,3 +9,6 @@ interface Env {
   ANTHROPIC_API_KEY: string;
   TELEGRAM_BOT_TOKEN: string;
 }
+
+// Injected at build time via vite.define in astro.config.mjs (git short hash).
+declare const __BUILD_HASH__: string;

@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { env } from "cloudflare:workers";
 import { ApproveRequestSchema } from "../../../lib/schema";
-import { approveMedia, getPendingMedia, insertSocialDrafts } from "../../../lib/d1";
+import { approveMediaGroup, getPendingMediaBatch, insertSocialDrafts } from "../../../lib/d1";
 import { stripJpegExif } from "../../../lib/exif";
 import { buildDrafts } from "../../../lib/social";
 
@@ -16,27 +16,34 @@ export const POST: APIRoute = async ({ request }) => {
   const req = parsed.data;
   const { DB, MEDIA_PENDING, MEDIA_PUBLIC } = env;
 
-  const pending = await getPendingMedia(DB, req.mediaId);
-  if (!pending) {
-    return Response.json({ error: "not found or already decided" }, { status: 404 });
+  const pending = await getPendingMediaBatch(DB, req.mediaIds);
+  if (pending.length !== req.mediaIds.length) {
+    return Response.json({ error: "one or more items not found or already decided" }, { status: 404 });
   }
 
-  const object = await MEDIA_PENDING.get(pending.r2_pending_key);
-  if (!object) {
-    return Response.json({ error: "media file missing from storage" }, { status: 500 });
+  const r2PublicKeys: Record<string, string> = {};
+  for (const row of pending) {
+    const object = await MEDIA_PENDING.get(row.r2_pending_key);
+    if (!object) {
+      return Response.json({ error: `media file missing from storage: ${row.id}` }, { status: 500 });
+    }
+    const originalBytes = await object.arrayBuffer();
+    const publicBytes = row.media_kind === "photo" ? stripJpegExif(originalBytes) : originalBytes;
+    await MEDIA_PUBLIC.put(row.r2_pending_key, publicBytes, {
+      httpMetadata: { contentType: object.httpMetadata?.contentType ?? "image/jpeg" },
+    });
+    r2PublicKeys[row.id] = row.r2_pending_key;
   }
 
-  const originalBytes = await object.arrayBuffer();
-  const publicBytes = pending.media_kind === "photo" ? stripJpegExif(originalBytes) : originalBytes;
-  const r2PublicKey = pending.r2_pending_key;
-
-  await MEDIA_PUBLIC.put(r2PublicKey, publicBytes, {
-    httpMetadata: { contentType: object.httpMetadata?.contentType ?? "image/jpeg" },
-  });
-  await approveMedia(DB, req, r2PublicKey);
+  await approveMediaGroup(DB, req, r2PublicKeys);
   await insertSocialDrafts(
     DB,
-    buildDrafts({ mediaId: req.mediaId, category: req.category, items: req.items, mediaKey: r2PublicKey }),
+    buildDrafts({
+      mediaId: req.mediaIds[0],
+      category: req.category,
+      items: req.items,
+      mediaKey: r2PublicKeys[req.mediaIds[0]],
+    }),
   );
 
   return Response.json({ ok: true });

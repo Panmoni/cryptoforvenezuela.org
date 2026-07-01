@@ -3,6 +3,10 @@
 	"compatibility_date": "2026-07-01",
 	"compatibility_flags": ["global_fetch_strictly_public"],
 	"name": "cryptoforvenezuela-site",
+	// Site is only meant to be reachable via the custom domain, which is the
+	// only hostname Cloudflare Access is bound to — the default *.workers.dev
+	// URL would serve /admin unauthenticated.
+	"workers_dev": false,
 	"main": "@astrojs/cloudflare/entrypoints/server",
 	"assets": {
 		"directory": "./dist",

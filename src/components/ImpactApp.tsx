@@ -18,6 +18,7 @@ export default function ImpactApp() {
   const [counters, setCounters] = useState<CounterRow[] | null>(null);
   const [gallery, setGallery] = useState<GalleryItem[] | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<GalleryItem | null>(null);
 
   useEffect(() => {
     fetch("/api/counters")
@@ -76,12 +77,19 @@ export default function ImpactApp() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
           {gallery?.map((item) => (
             <figure key={item.id} style={{ margin: 0 }}>
-              <img
-                src={`/api/media/${item.r2_public_key}`}
-                alt={item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-                style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
-                loading="lazy"
-              />
+              <button
+                type="button"
+                onClick={() => setLightbox(item)}
+                style={{ display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "zoom-in" }}
+                aria-label="View full size"
+              >
+                <img
+                  src={`/api/media/${item.r2_public_key}`}
+                  alt={item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                  style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
+                  loading="lazy"
+                />
+              </button>
               <figcaption style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>
                 {item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
               </figcaption>
@@ -90,6 +98,43 @@ export default function ImpactApp() {
         </div>
         {gallery?.length === 0 && <p style={{ color: "var(--text-dim)" }}>No photos in this category yet.</p>}
       </section>
+
+      {lightbox && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setLightbox(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 100,
+            cursor: "zoom-out",
+          }}
+        >
+          <img
+            src={`/api/media/${lightbox.r2_public_key}`}
+            alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+            style={{ maxWidth: "100%", maxHeight: "85vh", borderRadius: 8, objectFit: "contain" }}
+          />
+          <p style={{ color: "var(--text)", marginTop: 12, fontSize: 20, textAlign: "center", maxWidth: "80ch" }}>
+            {lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+          </p>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => setLightbox(null)}
+            style={{ marginTop: 8 }}
+          >
+            Close
+          </button>
+        </div>
+      )}
     </div>
   );
 }

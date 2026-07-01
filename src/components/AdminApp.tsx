@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
 import { CATEGORIES, type Category } from "../lib/schema";
 
-interface QueueItem {
+interface QueuePhoto {
   id: string;
-  received_at: number;
   media_kind: string;
   r2_pending_key: string;
+  scene: string | null;
+}
+
+interface QueueGroup {
+  groupId: string;
+  mediaIds: string[];
+  photos: QueuePhoto[];
+  received_at: number;
   sender_caption: string | null;
   category: string | null;
   items_json: string | null;
-  scene: string | null;
   location_hint: string | null;
   visible_date: string | null;
   ocr_text: string | null;
@@ -37,7 +43,7 @@ interface SocialDraftRow {
 }
 
 export default function AdminApp() {
-  const [queue, setQueue] = useState<QueueItem[] | null>(null);
+  const [queue, setQueue] = useState<QueueGroup[] | null>(null);
   const [live, setLive] = useState<LiveItem[] | null>(null);
   const [drafts, setDrafts] = useState<SocialDraftRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,8 +74,8 @@ export default function AdminApp() {
       <section className="section">
         <h2>Needs review ({queue?.length ?? "…"})</h2>
         {queue?.length === 0 && <p style={{ color: "var(--text-dim)" }}>Nothing waiting. Good.</p>}
-        {queue?.map((item) => (
-          <ReviewCard key={item.id} item={item} onDone={refresh} />
+        {queue?.map((group) => (
+          <ReviewCard key={group.groupId} group={group} onDone={refresh} />
         ))}
       </section>
 
@@ -90,17 +96,17 @@ export default function AdminApp() {
   );
 }
 
-function ReviewCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
+function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }) {
   const suggestedItems: DraftItem[] = (() => {
     try {
-      const parsed = item.items_json ? JSON.parse(item.items_json) : [];
+      const parsed = group.items_json ? JSON.parse(group.items_json) : [];
       return parsed.map((i: { name: string; count_estimate: number }) => ({ name: i.name, count: i.count_estimate }));
     } catch {
       return [];
     }
   })();
 
-  const [category, setCategory] = useState<Category | "">((item.category as Category) ?? "");
+  const [category, setCategory] = useState<Category | "">((group.category as Category) ?? "");
   const [items, setItems] = useState<DraftItem[]>(suggestedItems.length ? suggestedItems : [{ name: "", count: 0 }]);
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
@@ -115,7 +121,7 @@ function ReviewCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
     const res = await fetch("/api/admin/approve", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mediaId: item.id, category, items: items.filter((i) => i.name.trim()) }),
+      body: JSON.stringify({ mediaIds: group.mediaIds, category, items: items.filter((i) => i.name.trim()) }),
     });
     setBusy(false);
     if (res.ok) onDone();
@@ -127,7 +133,7 @@ function ReviewCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
     const res = await fetch("/api/admin/reject", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mediaId: item.id, reason: reason || undefined }),
+      body: JSON.stringify({ mediaIds: group.mediaIds, reason: reason || undefined }),
     });
     setBusy(false);
     if (res.ok) onDone();
@@ -136,22 +142,42 @@ function ReviewCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
 
   return (
     <div className="card" style={{ marginBottom: 20, display: "flex", gap: 20, flexWrap: "wrap" }}>
-      {item.media_kind === "photo" && (
-        <img
-          src={`/api/admin/media/${item.id}`}
-          alt="submitted"
-          style={{ width: 220, height: 220, objectFit: "cover", borderRadius: 8 }}
-        />
+      {group.photos.some((p) => p.media_kind === "photo") && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxWidth: 220 }}>
+          {group.photos
+            .filter((p) => p.media_kind === "photo")
+            .map((p) => (
+              <img
+                key={p.id}
+                src={`/api/admin/media/${p.id}`}
+                alt="submitted"
+                title={p.scene ?? undefined}
+                style={{
+                  width: group.photos.length > 1 ? 104 : 220,
+                  height: group.photos.length > 1 ? 104 : 220,
+                  objectFit: "cover",
+                  borderRadius: 8,
+                }}
+              />
+            ))}
+        </div>
       )}
       <div style={{ flex: 1, minWidth: 260 }}>
         <p style={{ color: "var(--text-dim)", fontSize: 13 }}>
-          {new Date(item.received_at).toLocaleString()}
-          {item.location_hint ? ` · ${item.location_hint}` : ""}
+          {new Date(group.received_at).toLocaleString()}
+          {group.location_hint ? ` · ${group.location_hint}` : ""}
+          {group.photos.length > 1 ? ` · ${group.photos.length} photos` : ""}
         </p>
-        {item.sender_caption && (
-          <p style={{ fontSize: 14, fontStyle: "italic" }}>"{item.sender_caption}" — sender's caption</p>
+        {group.sender_caption && (
+          <p style={{ fontSize: 14, fontStyle: "italic" }}>"{group.sender_caption}" — sender's caption</p>
         )}
-        {item.scene && <p style={{ fontSize: 14 }}>{item.scene}</p>}
+        {group.photos
+          .filter((p) => p.scene)
+          .map((p) => (
+            <p key={p.id} style={{ fontSize: 14 }}>
+              {p.scene}
+            </p>
+          ))}
 
         <label style={{ display: "block", marginBottom: 8 }}>
           Category{" "}
