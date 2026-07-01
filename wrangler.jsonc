@@ -31,5 +31,10 @@
 	"r2_buckets": [
 		{ "binding": "MEDIA_PENDING", "bucket_name": "media-pending" },
 		{ "binding": "MEDIA_PUBLIC", "bucket_name": "media-public" }
-	]
+	],
+	// Workers AI's free daily allocation comfortably covers translating a
+	// handful of Telegram captions a day — no paid translation API needed.
+	"ai": {
+		"binding": "AI"
+	}
 }

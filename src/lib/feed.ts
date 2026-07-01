@@ -6,6 +6,7 @@ export interface FeedItem {
   id: string;
   title: string;
   summary: string;
+  summaryEn: string | null;
   dateMs: number;
   attachments: { url: string; mimeType: string }[];
 }
@@ -22,10 +23,13 @@ function mimeTypeFor(mediaKind: string): string {
 export function buildFeedItems(groups: PublicMediaGroup[]): FeedItem[] {
   return groups.map((group) => {
     const itemsText = group.items.length ? group.items.map((i) => `${i.count} ${i.name}`).join(", ") : null;
+    const isTranslated =
+      group.senderCaptionEn && group.senderCaptionEn.trim().toLowerCase() !== (group.senderCaption ?? "").trim().toLowerCase();
     return {
       id: group.groupId,
       title: `${itemsText ?? "General evidence"} — ${group.category}`,
       summary: group.senderCaption ?? itemsText ?? "General evidence",
+      summaryEn: isTranslated ? group.senderCaptionEn : null,
       dateMs: group.received_at,
       attachments: group.photos.map((p) => ({
         url: `${SITE_URL}/api/media/${p.r2_public_key}`,

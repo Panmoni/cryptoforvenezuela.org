@@ -27,7 +27,7 @@ export const GET: APIRoute = async () => {
       <link>${SITE_URL}/#gallery</link>
       <guid isPermaLink="false">${escapeXml(item.id)}</guid>
       <pubDate>${new Date(item.dateMs).toUTCString()}</pubDate>
-      <description>${escapeXml(item.summary)}</description>
+      <description>${escapeXml(item.summaryEn ? `${item.summary} (English: ${item.summaryEn})` : item.summary)}</description>
 ${item.attachments.map((a) => `      <enclosure url="${escapeXml(a.url)}" type="${a.mimeType}" length="0"/>`).join("\n")}
     </item>`,
     )

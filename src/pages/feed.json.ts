@@ -21,7 +21,7 @@ export const GET: APIRoute = async () => {
       id: item.id,
       url: `${SITE_URL}/#gallery`,
       title: item.title,
-      content_text: item.summary,
+      content_text: item.summaryEn ? `${item.summary}\n\nEnglish: ${item.summaryEn}` : item.summary,
       date_published: new Date(item.dateMs).toISOString(),
       attachments: item.attachments.map((a) => ({ url: a.url, mime_type: a.mimeType })),
     })),

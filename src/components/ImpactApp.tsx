@@ -18,7 +18,15 @@ interface GalleryGroup {
   category: string;
   items: { name: string; count: number }[];
   senderCaption: string | null;
+  senderCaptionEn: string | null;
   photos: GalleryPhoto[];
+}
+
+/** Only worth showing the translation when it actually differs from the
+ * original — a caption already in English round-trips through Workers AI
+ * unchanged, and repeating it verbatim is just clutter. */
+function translationDiffers(original: string | null, translated: string | null): translated is string {
+  return !!translated && translated.trim().toLowerCase() !== (original ?? "").trim().toLowerCase();
 }
 
 const PAGE_SIZE = 10;
@@ -177,6 +185,9 @@ export default function ImpactApp() {
                     <strong style={{ color: "var(--text-dim)" }}>{group.photos.length} photos — same delivery. </strong>
                   )}
                   {group.senderCaption && <em>"{group.senderCaption}" — </em>}
+                  {translationDiffers(group.senderCaption, group.senderCaptionEn) && (
+                    <span style={{ color: "var(--text-dim)" }}>(EN: "{group.senderCaptionEn}") — </span>
+                  )}
                   {group.items.length > 0
                     ? group.items.map((i) => `${i.count} ${i.name}`).join(", ")
                     : !group.senderCaption && "General evidence"}
@@ -282,6 +293,19 @@ export default function ImpactApp() {
               }}
             >
               "{lightbox.senderCaption}"
+            </p>
+          )}
+          {translationDiffers(lightbox.senderCaption, lightbox.senderCaptionEn) && (
+            <p
+              style={{
+                color: "var(--text-dim)",
+                marginTop: 4,
+                fontSize: 15,
+                textAlign: "center",
+                maxWidth: "80ch",
+              }}
+            >
+              English: "{lightbox.senderCaptionEn}"
             </p>
           )}
           {lightbox.items.length > 0 && (

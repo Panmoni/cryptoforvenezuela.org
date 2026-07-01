@@ -5,6 +5,7 @@ import { ApproveRequestSchema } from "../../../lib/schema";
 import { approveMediaGroup, getPendingMediaBatch, insertSocialDrafts } from "../../../lib/d1";
 import { stripJpegExif } from "../../../lib/exif";
 import { buildDrafts } from "../../../lib/social";
+import { translateToEnglish } from "../../../lib/translate";
 
 export const prerender = false;
 
@@ -14,7 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ error: z.flattenError(parsed.error) }, { status: 400 });
   }
   const req = parsed.data;
-  const { DB, MEDIA_PENDING, MEDIA_PUBLIC } = env;
+  const { DB, MEDIA_PENDING, MEDIA_PUBLIC, AI } = env;
 
   const pending = await getPendingMediaBatch(DB, req.mediaIds);
   if (pending.length !== req.mediaIds.length) {
@@ -41,7 +42,13 @@ export const POST: APIRoute = async ({ request }) => {
     r2PublicKeys[row.id] = row.r2_pending_key;
   }
 
-  await approveMediaGroup(DB, req, r2PublicKeys);
+  // Translate once, at approve time, so it's never redone per pageview —
+  // best-effort: a failed translation still lets the post publish with just
+  // the original Spanish caption.
+  const senderCaption = pending.map((row) => row.sender_caption).find((c): c is string => c !== null);
+  const senderCaptionEn = senderCaption ? await translateToEnglish(AI, senderCaption) : null;
+
+  await approveMediaGroup(DB, req, r2PublicKeys, senderCaptionEn);
   await insertSocialDrafts(
     DB,
     buildDrafts({

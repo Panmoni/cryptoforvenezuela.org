@@ -157,15 +157,16 @@ export async function approveMediaGroup(
   db: D1Database,
   req: ApproveRequest,
   r2PublicKeys: Record<string, string>,
+  senderCaptionEn: string | null = null,
 ): Promise<void> {
   const primaryId = req.mediaIds[0];
   const statements = [
     ...req.mediaIds.map((id) =>
       db
         .prepare(
-          `UPDATE media SET status = 'live', r2_public_key = ?, category = ? WHERE id = ? AND status = 'needs_review'`,
+          `UPDATE media SET status = 'live', r2_public_key = ?, category = ?, sender_caption_en = ? WHERE id = ? AND status = 'needs_review'`,
         )
-        .bind(r2PublicKeys[id], req.category, id),
+        .bind(r2PublicKeys[id], req.category, senderCaptionEn, id),
     ),
     ...req.items.map((item) =>
       db
@@ -217,12 +218,15 @@ export interface PendingMediaRow {
   id: string;
   r2_pending_key: string;
   media_kind: string;
+  sender_caption: string | null;
 }
 
 export async function getPendingMediaBatch(db: D1Database, mediaIds: string[]): Promise<PendingMediaRow[]> {
   const placeholders = mediaIds.map(() => "?").join(",");
   const { results } = await db
-    .prepare(`SELECT id, r2_pending_key, media_kind FROM media WHERE id IN (${placeholders}) AND status = 'needs_review'`)
+    .prepare(
+      `SELECT id, r2_pending_key, media_kind, sender_caption FROM media WHERE id IN (${placeholders}) AND status = 'needs_review'`,
+    )
     .bind(...mediaIds)
     .all<PendingMediaRow>();
   return results;
@@ -262,6 +266,7 @@ export interface PublicMediaGroup {
   category: string;
   items: { name: string; count: number }[];
   senderCaption: string | null;
+  senderCaptionEn: string | null;
   photos: { id: string; r2_public_key: string; media_kind: string }[];
 }
 
@@ -288,7 +293,7 @@ export async function listPublicMedia(
   const [{ results: liveRows }, { results: impactRows }] = await Promise.all([
     db
       .prepare(
-        `SELECT id, received_at, r2_public_key, media_kind, media_group_id, sender_caption, category
+        `SELECT id, received_at, r2_public_key, media_kind, media_group_id, sender_caption, sender_caption_en, category
          FROM media WHERE status = 'live' ORDER BY received_at DESC`,
       )
       .all<{
@@ -298,6 +303,7 @@ export async function listPublicMedia(
         media_kind: string;
         media_group_id: string | null;
         sender_caption: string | null;
+        sender_caption_en: string | null;
         category: string | null;
       }>(),
     db
@@ -327,6 +333,7 @@ export async function listPublicMedia(
         category: row.category,
         items: [],
         senderCaption: row.sender_caption,
+        senderCaptionEn: row.sender_caption_en,
         photos: [],
       };
       groups.set(key, group);
@@ -334,6 +341,7 @@ export async function listPublicMedia(
     }
     group.photos.push({ id: row.id, r2_public_key: row.r2_public_key, media_kind: row.media_kind });
     group.senderCaption ??= row.sender_caption;
+    group.senderCaptionEn ??= row.sender_caption_en;
     const own = itemsByMedia.get(row.id);
     if (own) group.items.push(...own);
   }
