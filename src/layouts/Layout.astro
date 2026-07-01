@@ -4,9 +4,18 @@ import "../styles/global.css";
 interface Props {
   title: string;
   description?: string;
+  noindex?: boolean;
 }
 
-const { title, description = "Direct, wallet-to-wallet earthquake relief for Venezuela." } = Astro.props;
+const {
+  title,
+  description = "Direct, wallet-to-wallet earthquake relief for the June 2026 Venezuela earthquake. No custody, no middlemen — every donation goes straight to a volunteer group on the ground in Caracas, with every delivery photo-verified.",
+  noindex = false,
+} = Astro.props;
+
+const pageTitle = `${title} · Crypto for Venezuela`;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const ogImageURL = new URL("/android-chrome-512x512.png", Astro.site);
 ---
 
 <!doctype html>
@@ -14,9 +23,29 @@ const { title, description = "Direct, wallet-to-wallet earthquake relief for Ven
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} · Crypto for Venezuela</title>
+    <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#0b1220" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Crypto for Venezuela" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImageURL} />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
   </head>
   <body>
     <main>

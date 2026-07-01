@@ -15,6 +15,7 @@ const buildHash = (() => {
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://cryptoforvenezuela.org',
   adapter: cloudflare(),
   integrations: [react()],
   // 'server' so /admin and /api/* are dynamic; content pages opt into
