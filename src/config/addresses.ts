@@ -46,4 +46,4 @@ export const ADDRESS_ALERT: Record<ChainKey, boolean> = {
  * established personal account (see plan.md 1.4 / SETUP.md step 7), then
  * put the real URL here and redeploy.
  */
-export const CANONICAL_ANCHOR_URL = "https://TODO-your-established-social-handle-post";
+export const CANONICAL_ANCHOR_URL = "https://x.com/GeorgeDonnelly/status/2072394462337323231";
