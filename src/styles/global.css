@@ -192,3 +192,23 @@ footer .build-hash {
   vertical-align: -0.15em;
   margin: 0 0.2em;
 }
+
+.tech-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.tech-stack-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.tech-stack-item:hover {
+  color: var(--text);
+}
