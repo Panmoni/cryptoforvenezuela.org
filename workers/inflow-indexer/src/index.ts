@@ -10,6 +10,13 @@ interface Env {
 const LAMPORTS_DECIMALS = 9;
 const POLL_LIMIT = 50;
 
+// Known Solana SPL mints we recognize by symbol; anything else falls back to
+// its mint address so it still shows up rather than being silently dropped.
+const SOLANA_MINT_SYMBOLS: Record<string, string> = {
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: "USDC",
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: "USDT",
+};
+
 export default {
   // Real trigger — see wrangler.jsonc `triggers.crons`.
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -40,6 +47,9 @@ interface HeliusTx {
   signature: string;
   timestamp: number; // unix seconds
   nativeTransfers?: { fromUserAccount: string; toUserAccount: string; amount: number }[];
+  // Helius resolves the owning wallet (not the raw token account) into
+  // from/toUserAccount here, and tokenAmount is already decimal-adjusted.
+  tokenTransfers?: { fromUserAccount: string; toUserAccount: string; mint: string; tokenAmount: number }[];
 }
 
 async function pollSolana(env: Env): Promise<{ inserted: number }> {
@@ -63,6 +73,22 @@ async function pollSolana(env: Env): Promise<{ inserted: number }> {
           transfer.fromUserAccount,
           transfer.toUserAccount,
           formatUnits(BigInt(transfer.amount), LAMPORTS_DECIMALS),
+          tx.timestamp * 1000,
+        ),
+      );
+    }
+    for (const transfer of tx.tokenTransfers ?? []) {
+      if (transfer.toUserAccount !== target) continue;
+      statements.push(
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO inflows (tx_hash, chain, from_addr, to_addr, token, amount, confirmed_at)
+           VALUES (?, 'solana', ?, ?, ?, ?, ?)`,
+        ).bind(
+          tx.signature,
+          transfer.fromUserAccount,
+          transfer.toUserAccount,
+          SOLANA_MINT_SYMBOLS[transfer.mint] ?? transfer.mint,
+          String(transfer.tokenAmount),
           tx.timestamp * 1000,
         ),
       );
