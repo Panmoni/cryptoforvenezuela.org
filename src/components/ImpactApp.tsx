@@ -80,6 +80,9 @@ export default function ImpactApp() {
 
       <section className="section" id="gallery">
         <h2>Evidence {filter ? `— ${filter}` : ""}</h2>
+        <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: -8, marginBottom: 16 }}>
+          Follow programmatically: <a href="/feed.xml">RSS</a> · <a href="/feed.json">JSON Feed</a>
+        </p>
         {filter && (
           <button type="button" className="button secondary" onClick={() => setFilter(null)} style={{ marginBottom: 16 }}>
             Clear filter
