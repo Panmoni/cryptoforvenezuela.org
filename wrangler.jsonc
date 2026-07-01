@@ -1,0 +1,31 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": ["global_fetch_strictly_public"],
+	"name": "cryptoforvenezuela-site",
+	"main": "@astrojs/cloudflare/entrypoints/server",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
+	"observability": {
+		"enabled": true
+	},
+	// Site (Astro SSR routes + /admin API) reads/writes the same D1 database and
+	// R2 buckets as the standalone workers/ — created once via:
+	//   wrangler d1 create relief
+	//   wrangler r2 bucket create media-pending
+	//   wrangler r2 bucket create media-public
+	// then the database_id below is filled in and copied into each workers/*/wrangler.jsonc.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "relief",
+			"database_id": "dd6bf929-b5bb-4cd5-a239-d327c236bbc9"
+		}
+	],
+	"r2_buckets": [
+		{ "binding": "MEDIA_PENDING", "bucket_name": "media-pending" },
+		{ "binding": "MEDIA_PUBLIC", "bucket_name": "media-public" }
+	]
+}

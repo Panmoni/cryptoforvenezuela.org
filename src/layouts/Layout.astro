@@ -1,0 +1,39 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = "Direct, wallet-to-wallet earthquake relief for Venezuela." } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} · Crypto for Venezuela</title>
+    <meta name="description" content={description} />
+  </head>
+  <body>
+    <main>
+      <nav class="nav">
+        <a href="/">Donate</a>
+        <a href="/impact">Impact</a>
+        <a href="/received">Received</a>
+        <a href="/about">About</a>
+      </nav>
+      <slot />
+      <footer>
+        <p>
+          Wallet-to-wallet direct relief. This site never custodies funds and never holds keys — every
+          donation goes straight to the recipient's own wallet. Not a registered charity; no tax receipt.
+          <a href="/about">Read how this works.</a>
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+---
+export const prerender = false;
+import Layout from "../../layouts/Layout.astro";
+import AdminApp from "../../components/AdminApp";
+---
+
+<Layout title="Admin review">
+  <section class="hero" style="padding-top: 32px;">
+    <h1>Review queue</h1>
+    <p>
+      Nothing here is public until you click Approve. This route must be protected by Cloudflare Access —
+      see SETUP.md — before it's ever deployed with real data behind it.
+    </p>
+  </section>
+  <AdminApp client:load />
+</Layout>

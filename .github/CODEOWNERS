@@ -1,0 +1,4 @@
+# The one file where a rushed direct-merge is the whole threat model.
+# Any PR touching the recipient address constants requires review from an
+# owner before it can merge. Fill in the real GitHub username/team below.
+src/config/addresses.ts @TODO-owner-github-username

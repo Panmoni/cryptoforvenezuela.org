@@ -1,0 +1,17 @@
+---
+export const prerender = true;
+import Layout from "../layouts/Layout.astro";
+import ReceivedApp from "../components/ReceivedApp";
+---
+
+<Layout title="Received">
+  <section class="hero">
+    <h1>What's come in on-chain</h1>
+    <p>
+      This data comes straight from Solana and Ethereum — anyone can verify it independently on a block
+      explorer. Shown here next to the <a href="/impact">impact log</a> so you can see money in vs. aid
+      delivered.
+    </p>
+  </section>
+  <ReceivedApp client:load />
+</Layout>

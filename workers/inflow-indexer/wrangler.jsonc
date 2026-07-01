@@ -1,0 +1,26 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-07-01",
+	"name": "cryptoforvenezuela-inflow-indexer",
+	"main": "src/index.ts",
+	"observability": { "enabled": true },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "relief",
+			"database_id": "dd6bf929-b5bb-4cd5-a239-d327c236bbc9"
+		}
+	],
+	// Polls both chains every 5 minutes — simpler than standing up inbound
+	// webhooks (no dashboard registration, no signing-secret management,
+	// works with a plain API key from either provider). `fetch` also runs
+	// the same poll on any GET, for manual testing between cron ticks.
+	"triggers": {
+		"crons": ["*/5 * * * *"]
+	}
+	// Secrets (wrangler secret put, run from this directory):
+	//   HELIUS_API_KEY   — plain Helius API key, used against the enhanced
+	//                      transactions REST API for the Solana address
+	//   ALCHEMY_API_KEY  — plain Alchemy API key, used against
+	//                      alchemy_getAssetTransfers for the Ethereum address
+}

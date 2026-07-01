@@ -1,0 +1,23 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-07-01",
+	"name": "cryptoforvenezuela-telegram-webhook",
+	"main": "src/index.ts",
+	"observability": { "enabled": true },
+	// Same D1 database as the site (wrangler.jsonc at repo root) — fill in
+	// database_id after `wrangler d1 create relief` and copy it here too.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "relief",
+			"database_id": "dd6bf929-b5bb-4cd5-a239-d327c236bbc9"
+		}
+	],
+	"r2_buckets": [{ "binding": "MEDIA_PENDING", "bucket_name": "media-pending" }],
+	"queues": {
+		"producers": [{ "queue": "vision-extract-queue", "binding": "VISION_QUEUE" }]
+	}
+	// Secrets (wrangler secret put, run from this directory):
+	//   TELEGRAM_BOT_TOKEN
+	//   TELEGRAM_WEBHOOK_SECRET  — the secret_token passed to setWebhook
+}

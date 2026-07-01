@@ -1,0 +1,48 @@
+---
+export const prerender = true;
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="About">
+  <section class="hero">
+    <h1>How this works</h1>
+  </section>
+
+  <section class="section">
+    <h2>Wallet to wallet, nothing in between</h2>
+    <p>
+      This site displays two addresses — one on Solana, one on Ethereum — that belong to a friend of mine in
+      Caracas. When you send funds, they go directly to his wallet. This site, and I, never touch the money.
+      There is no pooled account, no smart contract holding funds, no custody of any kind.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2>What this isn't</h2>
+    <ul style="color: var(--text-dim)">
+      <li>Not a registered charity — no tax receipt, no 501(c)(3).</li>
+      <li>No KYC, no fiat on/off-ramp — this is crypto, wallet to wallet.</li>
+      <li>No pooled or custodial wallet — funds never pass through anything I control.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>Verifying the addresses</h2>
+    <p>
+      Address integrity is the single highest-stakes property of this whole project — a swapped address
+      means your donation reaches a clone, not him. The two addresses shown on the donate page were
+      published once, together, from an established personal channel I've used for years, and haven't
+      changed since. The "Verify this address" panel on the donate page links to that post and to a block
+      explorer so you can check independently before sending anything.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2>Impact tracking</h2>
+    <p>
+      Photos of purchases and deliveries come in from the ground via Telegram. Every single one is manually
+      reviewed and approved before it's published — nothing goes live automatically. Approved photos back
+      every number on the <a href="/impact">impact page</a>, and every number links back to its evidence.
+    </p>
+  </section>
+</Layout>

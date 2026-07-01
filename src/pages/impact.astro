@@ -1,0 +1,16 @@
+---
+export const prerender = true;
+import Layout from "../layouts/Layout.astro";
+import ImpactApp from "../components/ImpactApp";
+---
+
+<Layout title="Impact">
+  <section class="hero">
+    <h1>Every number here is a photo.</h1>
+    <p>
+      These counters are a straight sum over deliveries a human personally reviewed and approved — click any
+      number to see the photos behind it.
+    </p>
+  </section>
+  <ImpactApp client:load />
+</Layout>

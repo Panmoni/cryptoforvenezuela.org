@@ -1,0 +1,29 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-07-01",
+	"name": "cryptoforvenezuela-vision-extract",
+	"main": "src/index.ts",
+	"observability": { "enabled": true },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "relief",
+			"database_id": "dd6bf929-b5bb-4cd5-a239-d327c236bbc9"
+		}
+	],
+	"r2_buckets": [{ "binding": "MEDIA_PENDING", "bucket_name": "media-pending" }],
+	"queues": {
+		"consumers": [
+			{
+				"queue": "vision-extract-queue",
+				"max_batch_size": 5,
+				"max_retries": 3,
+				"dead_letter_queue": "vision-extract-dlq"
+			}
+		]
+	}
+	// Secrets (wrangler secret put, run from this directory):
+	//   ANTHROPIC_API_KEY
+	//   TELEGRAM_BOT_TOKEN   — used only to download the file via getFile
+	//   ADMIN_CHAT_ID        — your own Telegram chat_id, DM'd when the review queue grows
+}
