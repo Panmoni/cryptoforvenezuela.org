@@ -63,6 +63,7 @@ export const TelegramUpdateSchema = z.object({
       media_group_id: z.string().optional(),
       photo: z.array(z.object({ file_id: z.string(), file_size: z.number().optional() })).optional(),
       video: z.object({ file_id: z.string(), file_size: z.number().optional() }).optional(),
+      animation: z.object({ file_id: z.string(), file_size: z.number().optional() }).optional(),
       document: z
         .object({ file_id: z.string(), file_size: z.number().optional(), mime_type: z.string().optional() })
         .optional(),

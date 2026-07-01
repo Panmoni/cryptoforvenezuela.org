@@ -44,11 +44,14 @@ export default {
   },
 };
 
-async function processOne({ mediaId, fileId, caption }: VisionQueueMessage, env: Env): Promise<void> {
+async function processOne({ mediaId, fileId, caption, kind }: VisionQueueMessage, env: Env): Promise<void> {
   const bytes = await downloadTelegramFile(env.TELEGRAM_BOT_TOKEN, fileId);
   await env.MEDIA_PENDING.put(mediaId, bytes);
 
-  const suggestion = await extractAdvisory(bytes, env.ANTHROPIC_API_KEY, caption);
+  // The Anthropic call below only understands still images — sending video/
+  // document bytes mislabeled as image/jpeg just fails silently. Skip it
+  // and let the admin fill the form in by hand for those.
+  const suggestion = kind === "photo" ? await extractAdvisory(bytes, env.ANTHROPIC_API_KEY, caption) : null;
 
   await env.DB.batch([
     env.DB.prepare(

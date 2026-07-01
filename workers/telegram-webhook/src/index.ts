@@ -13,6 +13,7 @@ export interface VisionQueueMessage {
   fileId: string;
   chatId: number;
   caption?: string;
+  kind: "photo" | "video" | "document";
 }
 
 const TELEGRAM_MAX_BOT_API_FILE_BYTES = 20 * 1024 * 1024;
@@ -112,7 +113,7 @@ export default {
         .run();
     }
 
-    await env.VISION_QUEUE.send({ mediaId, fileId: media.file_id, chatId, caption: caption ?? undefined });
+    await env.VISION_QUEUE.send({ mediaId, fileId: media.file_id, chatId, caption: caption ?? undefined, kind: media.kind });
     await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, "Got it — in the review queue now.");
 
     return new Response("ok", { status: 200 });
@@ -134,6 +135,11 @@ function pickMedia(
   }
   if (message.video) {
     return { file_id: message.video.file_id, file_size: message.video.file_size, kind: "video" };
+  }
+  if (message.animation) {
+    // Telegram delivers GIFs as an MP4 under `animation`; store/preview it
+    // the same way as `video`.
+    return { file_id: message.animation.file_id, file_size: message.animation.file_size, kind: "video" };
   }
   if (message.document) {
     return { file_id: message.document.file_id, file_size: message.document.file_size, kind: "document" };

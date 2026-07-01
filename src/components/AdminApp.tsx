@@ -117,11 +117,13 @@ function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }
 
   async function approve() {
     if (!category) return alert("Pick a category first.");
+    const namedItems = items.filter((i) => i.name.trim());
+    if (namedItems.length === 0) return alert("Add at least one item (with a name) before approving.");
     setBusy(true);
     const res = await fetch("/api/admin/approve", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mediaIds: group.mediaIds, category, items: items.filter((i) => i.name.trim()) }),
+      body: JSON.stringify({ mediaIds: group.mediaIds, category, items: namedItems }),
     });
     setBusy(false);
     if (res.ok) onDone();
@@ -142,11 +144,10 @@ function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }
 
   return (
     <div className="card" style={{ marginBottom: 20, display: "flex", gap: 20, flexWrap: "wrap" }}>
-      {group.photos.some((p) => p.media_kind === "photo") && (
+      {group.photos.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxWidth: 220 }}>
-          {group.photos
-            .filter((p) => p.media_kind === "photo")
-            .map((p) => (
+          {group.photos.map((p) =>
+            p.media_kind === "photo" ? (
               <img
                 key={p.id}
                 src={`/api/admin/media/${p.id}`}
@@ -159,7 +160,25 @@ function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }
                   borderRadius: 8,
                 }}
               />
-            ))}
+            ) : p.media_kind === "video" ? (
+              <video
+                key={p.id}
+                src={`/api/admin/media/${p.id}`}
+                controls
+                style={{ width: group.photos.length > 1 ? 104 : 220, borderRadius: 8 }}
+              />
+            ) : (
+              <a
+                key={p.id}
+                href={`/api/admin/media/${p.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="button secondary"
+              >
+                View document
+              </a>
+            ),
+          )}
         </div>
       )}
       <div style={{ flex: 1, minWidth: 260 }}>
