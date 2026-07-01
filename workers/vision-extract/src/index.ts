@@ -44,11 +44,11 @@ export default {
   },
 };
 
-async function processOne({ mediaId, fileId }: VisionQueueMessage, env: Env): Promise<void> {
+async function processOne({ mediaId, fileId, caption }: VisionQueueMessage, env: Env): Promise<void> {
   const bytes = await downloadTelegramFile(env.TELEGRAM_BOT_TOKEN, fileId);
   await env.MEDIA_PENDING.put(mediaId, bytes);
 
-  const suggestion = await extractAdvisory(bytes, env.ANTHROPIC_API_KEY);
+  const suggestion = await extractAdvisory(bytes, env.ANTHROPIC_API_KEY, caption);
 
   await env.DB.batch([
     env.DB.prepare(
@@ -91,9 +91,12 @@ async function downloadTelegramFile(token: string, fileId: string): Promise<Arra
  * because this never gates publication. A null result just means the
  * admin types the fields in by hand instead of editing pre-filled ones.
  */
-async function extractAdvisory(bytes: ArrayBuffer, apiKey: string) {
+async function extractAdvisory(bytes: ArrayBuffer, apiKey: string, senderCaption?: string) {
   try {
     const base64 = arrayBufferToBase64(bytes);
+    const instruction = senderCaption
+      ? `The sender included this caption, possibly in Spanish: "${senderCaption}". Use it as context — it may name the items, the recipients, or the situation more precisely than the photo alone. Extract the JSON now.`
+      : "Extract the JSON now.";
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -110,7 +113,7 @@ async function extractAdvisory(bytes: ArrayBuffer, apiKey: string) {
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-              { type: "text", text: "Extract the JSON now." },
+              { type: "text", text: instruction },
             ],
           },
         ],

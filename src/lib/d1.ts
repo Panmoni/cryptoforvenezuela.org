@@ -5,6 +5,7 @@ export interface NeedsReviewItem {
   received_at: number;
   media_kind: string;
   r2_pending_key: string;
+  sender_caption: string | null;
   category: string | null;
   items_json: string | null;
   scene: string | null;
@@ -24,7 +25,7 @@ export interface LiveItem {
 export async function listNeedsReview(db: D1Database): Promise<NeedsReviewItem[]> {
   const { results } = await db
     .prepare(
-      `SELECT m.id, m.received_at, m.media_kind, m.r2_pending_key,
+      `SELECT m.id, m.received_at, m.media_kind, m.r2_pending_key, m.sender_caption,
               e.category, e.items_json, e.scene, e.location_hint, e.visible_date, e.ocr_text
        FROM media m
        LEFT JOIN extraction e ON e.media_id = m.id

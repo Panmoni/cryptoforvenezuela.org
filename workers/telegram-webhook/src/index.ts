@@ -12,6 +12,7 @@ export interface VisionQueueMessage {
   mediaId: string;
   fileId: string;
   chatId: number;
+  caption?: string;
 }
 
 const TELEGRAM_MAX_BOT_API_FILE_BYTES = 20 * 1024 * 1024;
@@ -70,15 +71,29 @@ export default {
 
     const mediaId = crypto.randomUUID();
     const r2PendingKey = `${mediaId}`;
+    const mediaGroupId = message.media_group_id ?? null;
+
+    // Telegram sends each photo in a multi-image post as a separate update,
+    // and only ONE of them carries the caption. If this one didn't get it,
+    // check whether a sibling in the same album already did.
+    let caption = message.caption ?? null;
+    if (!caption && mediaGroupId) {
+      const sibling = await env.DB.prepare(
+        `SELECT sender_caption FROM media WHERE media_group_id = ? AND sender_caption IS NOT NULL LIMIT 1`,
+      )
+        .bind(mediaGroupId)
+        .first<{ sender_caption: string }>();
+      caption = sibling?.sender_caption ?? null;
+    }
 
     // INSERT OR IGNORE on the update_id unique index is the dedupe: a
     // Telegram-redelivered update silently no-ops here instead of
     // double-ingesting the same photo.
     const insert = await env.DB.prepare(
-      `INSERT OR IGNORE INTO media (id, update_id, source_user, received_at, media_kind, r2_pending_key, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+      `INSERT OR IGNORE INTO media (id, update_id, source_user, received_at, media_kind, r2_pending_key, status, sender_caption, media_group_id)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
     )
-      .bind(mediaId, update.update_id, String(chatId), Date.now(), media.kind, r2PendingKey)
+      .bind(mediaId, update.update_id, String(chatId), Date.now(), media.kind, r2PendingKey, caption, mediaGroupId)
       .run();
 
     if (insert.meta.changes === 0) {
@@ -86,7 +101,18 @@ export default {
       return new Response("ok", { status: 200 });
     }
 
-    await env.VISION_QUEUE.send({ mediaId, fileId: media.file_id, chatId });
+    // Delivery order within an album isn't guaranteed — if THIS message is
+    // the one that carried the caption, backfill any siblings that already
+    // landed without it.
+    if (message.caption && mediaGroupId) {
+      await env.DB.prepare(
+        `UPDATE media SET sender_caption = ? WHERE media_group_id = ? AND id != ? AND sender_caption IS NULL`,
+      )
+        .bind(message.caption, mediaGroupId, mediaId)
+        .run();
+    }
+
+    await env.VISION_QUEUE.send({ mediaId, fileId: media.file_id, chatId, caption: caption ?? undefined });
     await sendMessage(env.TELEGRAM_BOT_TOKEN, chatId, "Got it — in the review queue now.");
 
     return new Response("ok", { status: 200 });

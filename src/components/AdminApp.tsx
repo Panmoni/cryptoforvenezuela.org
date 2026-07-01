@@ -6,6 +6,7 @@ interface QueueItem {
   received_at: number;
   media_kind: string;
   r2_pending_key: string;
+  sender_caption: string | null;
   category: string | null;
   items_json: string | null;
   scene: string | null;
@@ -147,6 +148,9 @@ function ReviewCard({ item, onDone }: { item: QueueItem; onDone: () => void }) {
           {new Date(item.received_at).toLocaleString()}
           {item.location_hint ? ` · ${item.location_hint}` : ""}
         </p>
+        {item.sender_caption && (
+          <p style={{ fontSize: 14, fontStyle: "italic" }}>"{item.sender_caption}" — sender's caption</p>
+        )}
         {item.scene && <p style={{ fontSize: 14 }}>{item.scene}</p>}
 
         <label style={{ display: "block", marginBottom: 8 }}>

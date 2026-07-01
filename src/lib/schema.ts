@@ -56,6 +56,8 @@ export const TelegramUpdateSchema = z.object({
   message: z
     .object({
       chat: z.object({ id: z.number() }),
+      caption: z.string().optional(),
+      media_group_id: z.string().optional(),
       photo: z.array(z.object({ file_id: z.string(), file_size: z.number().optional() })).optional(),
       video: z.object({ file_id: z.string(), file_size: z.number().optional() }).optional(),
       document: z
