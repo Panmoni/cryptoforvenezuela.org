@@ -85,7 +85,17 @@ export default function ImpactApp() {
             <figure
               key={group.groupId}
               className={group.photos.length > 1 ? "card" : undefined}
-              style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0 }}
+              role="button"
+              tabIndex={0}
+              aria-label="View full size"
+              onClick={() => setLightbox(group)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setLightbox(group);
+                }
+              }}
+              style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0, cursor: "zoom-in" }}
             >
               <div
                 style={{
@@ -95,37 +105,23 @@ export default function ImpactApp() {
                 }}
               >
                 {group.photos.map((photo) => (
-                  <button
+                  <img
                     key={photo.id}
-                    type="button"
-                    onClick={() => setLightbox(group)}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      padding: 0,
-                      border: "none",
-                      background: "none",
-                      cursor: "zoom-in",
-                    }}
-                    aria-label="View full size"
-                  >
-                    <img
-                      src={`/api/media/${photo.r2_public_key}`}
-                      alt={group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-                      style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
-                      loading="lazy"
-                    />
-                  </button>
+                    src={`/api/media/${photo.r2_public_key}`}
+                    alt={group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                    style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
+                    loading="lazy"
+                  />
                 ))}
               </div>
-              <figcaption style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 8 }}>
+              <figcaption style={{ fontSize: 13, color: "var(--text)", marginTop: 8 }}>
                 {group.photos.length > 1 && (
-                  <span style={{ display: "block", fontWeight: 600, marginBottom: 2 }}>
+                  <span style={{ display: "block", fontWeight: 600, marginBottom: 2, color: "var(--text-dim)" }}>
                     {group.photos.length} photos — same delivery
                   </span>
                 )}
                 {group.senderCaption && (
-                  <span style={{ display: "block", fontStyle: "italic", marginBottom: 2 }}>
+                  <span style={{ display: "block", fontStyle: "italic", marginBottom: 4 }}>
                     "{group.senderCaption}"
                   </span>
                 )}
