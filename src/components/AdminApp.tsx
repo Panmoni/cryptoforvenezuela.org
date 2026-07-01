@@ -51,9 +51,9 @@ export default function AdminApp() {
   async function refresh() {
     try {
       const [q, l, d] = await Promise.all([
-        fetch("/api/admin/queue").then((r) => r.json()),
-        fetch("/api/admin/live").then((r) => r.json()),
-        fetch("/api/admin/drafts").then((r) => r.json()),
+        fetch("/api/admin/queue").then((r) => r.json<{ items: QueueGroup[] }>()),
+        fetch("/api/admin/live").then((r) => r.json<{ items: LiveItem[] }>()),
+        fetch("/api/admin/drafts").then((r) => r.json<{ items: SocialDraftRow[] }>()),
       ]);
       setQueue(q.items);
       setLive(l.items);

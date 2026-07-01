@@ -22,14 +22,14 @@ export default function ImpactApp() {
 
   useEffect(() => {
     fetch("/api/counters")
-      .then((r) => r.json())
+      .then((r) => r.json<{ counters: CounterRow[] }>())
       .then((d) => setCounters(d.counters));
   }, []);
 
   useEffect(() => {
     const qs = filter ? `?category=${encodeURIComponent(filter)}` : "";
     fetch(`/api/gallery${qs}`)
-      .then((r) => r.json())
+      .then((r) => r.json<{ items: GalleryItem[] }>())
       .then((d) => setGallery(d.items));
   }, [filter]);
 

@@ -1,8 +1,29 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { PublicKey } from "@solana/web3.js";
 import { ADDRESS_ALERT, CANONICAL_ANCHOR_URL, RECIPIENT_ADDRESSES, type ChainKey } from "../config/addresses";
 
 const SUGGESTED_USD = [5, 20, 50];
+
+// Canonical, immutable Solana program/mint addresses — safe to hardcode,
+// same category of well-known constant as the recipient addresses' shortHash.
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const USDC_MINT_SOLANA = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
+/** Derives the Associated Token Account address deterministically from
+ * (owner, mint) — the same PDA formula @solana/spl-token's
+ * getAssociatedTokenAddressSync uses, done by hand here since
+ * @solana/web3.js (already a dependency) has everything needed. This is
+ * display-only, for verification: donors still send to the plain wallet
+ * address above — their wallet resolves the token account itself. */
+function deriveAssociatedTokenAddress(owner: PublicKey, mint: PublicKey): string {
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  );
+  return ata.toBase58();
+}
 
 function ChainIcon({ chain }: { chain: ChainKey }) {
   if (chain === "solana") {
@@ -41,6 +62,10 @@ export default function DonationWidget() {
 
   const target = RECIPIENT_ADDRESSES[chain];
   const alerted = ADDRESS_ALERT[chain];
+  const usdcTokenAccount = useMemo(
+    () => deriveAssociatedTokenAddress(new PublicKey(RECIPIENT_ADDRESSES.solana.address), USDC_MINT_SOLANA),
+    [],
+  );
 
   useEffect(() => {
     if (!canvasRef.current || alerted) return;
@@ -117,10 +142,18 @@ export default function DonationWidget() {
               </button>
 
               {chain === "solana" && sendingToken && (
-                <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 12 }}>
-                  Same address for any SPL token — USDC, USDT, and others all work. Pick the token in your
-                  wallet and verify its contract there before confirming.
-                </p>
+                <div style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 12 }}>
+                  <p>
+                    Same wallet address for any SPL token — your wallet resolves the token account
+                    automatically, no need to type anything different.
+                  </p>
+                  <p style={{ marginTop: 8 }}>
+                    For verification: USDC sent here lands in this token account —{" "}
+                    <span className="mono" style={{ wordBreak: "break-all" }}>
+                      {usdcTokenAccount}
+                    </span>
+                  </p>
+                </div>
               )}
 
               <div style={{ marginTop: 16 }}>

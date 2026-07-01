@@ -20,7 +20,7 @@ export default function ReceivedApp() {
 
   useEffect(() => {
     fetch("/api/inflows")
-      .then((r) => r.json())
+      .then((r) => r.json<{ recent: InflowRow[]; totals: Record<string, number> }>())
       .then((d) => {
         setRecent(d.recent);
         setTotals(d.totals);
