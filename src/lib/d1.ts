@@ -245,35 +245,46 @@ export async function getCounters(db: D1Database): Promise<CounterRow[]> {
   return results;
 }
 
-export interface PublicMediaItem {
-  id: string;
+export interface PublicMediaGroup {
+  groupId: string;
   received_at: number;
-  r2_public_key: string;
   category: string;
   items: { name: string; count: number }[];
+  senderCaption: string | null;
+  photos: { id: string; r2_public_key: string }[];
 }
 
 /** Public gallery feed — every counter on /impact links back here, filtered
  * to the exact category/item that makes up that number. This is the
  * decomposition that makes a counter auditable rather than asserted.
  *
- * Impact rows live only on the group's primary media id (see
- * approveMediaGroup), but every photo in the group should still show up
- * here as supporting evidence — so a live photo without its own impact row
- * borrows its group sibling's category/items for display. Dataset is small
- * (a pro-bono relief site, not a high-volume feed), so this groups and
+ * Grouped by the same media_group_id used in admin review (see
+ * listNeedsReview / approveMediaGroup) — a multi-photo Telegram post shows
+ * as one card here too, not as separate unrelated tiles, and carries the
+ * sender's own caption alongside the AI-derived item breakdown. Impact
+ * rows live only on the group's primary media id, but every photo in the
+ * group still shows up as supporting evidence. Dataset is small (a
+ * pro-bono relief site, not a high-volume feed), so this groups and
  * paginates in JS rather than a multi-way SQL join. */
 export async function listPublicMedia(
   db: D1Database,
   opts: { category?: string; limit?: number; offset?: number } = {},
-): Promise<PublicMediaItem[]> {
+): Promise<PublicMediaGroup[]> {
   const limit = opts.limit ?? 24;
   const offset = opts.offset ?? 0;
 
   const [{ results: liveRows }, { results: impactRows }] = await Promise.all([
     db
-      .prepare(`SELECT id, received_at, r2_public_key, media_group_id FROM media WHERE status = 'live' ORDER BY received_at DESC`)
-      .all<{ id: string; received_at: number; r2_public_key: string | null; media_group_id: string | null }>(),
+      .prepare(
+        `SELECT id, received_at, r2_public_key, media_group_id, sender_caption FROM media WHERE status = 'live' ORDER BY received_at DESC`,
+      )
+      .all<{
+        id: string;
+        received_at: number;
+        r2_public_key: string | null;
+        media_group_id: string | null;
+        sender_caption: string | null;
+      }>(),
     db
       .prepare(`SELECT media_id, category, item_name, count FROM impact`)
       .all<{ media_id: string; category: string; item_name: string; count: number }>(),
@@ -296,15 +307,33 @@ export async function listPublicMedia(
     if (own && !impactByGroup.has(key)) impactByGroup.set(key, own);
   }
 
-  const items: PublicMediaItem[] = [];
+  const groups = new Map<string, PublicMediaGroup>();
+  const order: string[] = [];
   for (const row of liveRows) {
     if (!row.r2_public_key) continue;
-    const impact = impactByGroup.get(row.media_group_id ?? row.id);
+    const key = row.media_group_id ?? row.id;
+    const impact = impactByGroup.get(key);
     if (!impact) continue; // orphaned live row with no group impact — shouldn't happen, but don't surface it
     if (opts.category && impact.category !== opts.category) continue;
-    items.push({ id: row.id, received_at: row.received_at, r2_public_key: row.r2_public_key, category: impact.category, items: impact.items });
+
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        groupId: key,
+        received_at: row.received_at,
+        category: impact.category,
+        items: impact.items,
+        senderCaption: row.sender_caption,
+        photos: [],
+      };
+      groups.set(key, group);
+      order.push(key);
+    }
+    group.photos.push({ id: row.id, r2_public_key: row.r2_public_key });
+    group.senderCaption ??= row.sender_caption;
   }
-  return items.slice(offset, offset + limit);
+
+  return order.slice(offset, offset + limit).map((k) => groups.get(k)!);
 }
 
 export interface InflowRow {

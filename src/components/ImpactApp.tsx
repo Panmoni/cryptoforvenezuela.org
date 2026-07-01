@@ -6,19 +6,25 @@ interface CounterRow {
   total: number;
 }
 
-interface GalleryItem {
+interface GalleryPhoto {
   id: string;
-  received_at: number;
   r2_public_key: string;
+}
+
+interface GalleryGroup {
+  groupId: string;
+  received_at: number;
   category: string;
   items: { name: string; count: number }[];
+  senderCaption: string | null;
+  photos: GalleryPhoto[];
 }
 
 export default function ImpactApp() {
   const [counters, setCounters] = useState<CounterRow[] | null>(null);
-  const [gallery, setGallery] = useState<GalleryItem[] | null>(null);
+  const [gallery, setGallery] = useState<GalleryGroup[] | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
-  const [lightbox, setLightbox] = useState<GalleryItem | null>(null);
+  const [lightbox, setLightbox] = useState<GalleryGroup | null>(null);
 
   useEffect(() => {
     fetch("/api/counters")
@@ -29,7 +35,7 @@ export default function ImpactApp() {
   useEffect(() => {
     const qs = filter ? `?category=${encodeURIComponent(filter)}` : "";
     fetch(`/api/gallery${qs}`)
-      .then((r) => r.json<{ items: GalleryItem[] }>())
+      .then((r) => r.json<{ items: GalleryGroup[] }>())
       .then((d) => setGallery(d.items));
   }, [filter]);
 
@@ -74,24 +80,56 @@ export default function ImpactApp() {
             Clear filter
           </button>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
-          {gallery?.map((item) => (
-            <figure key={item.id} style={{ margin: 0 }}>
-              <button
-                type="button"
-                onClick={() => setLightbox(item)}
-                style={{ display: "block", width: "100%", padding: 0, border: "none", background: "none", cursor: "zoom-in" }}
-                aria-label="View full size"
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+          {gallery?.map((group) => (
+            <figure
+              key={group.groupId}
+              className={group.photos.length > 1 ? "card" : undefined}
+              style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0 }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: group.photos.length > 1 ? "repeat(2, 1fr)" : "1fr",
+                  gap: 4,
+                }}
               >
-                <img
-                  src={`/api/media/${item.r2_public_key}`}
-                  alt={item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-                  style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
-                  loading="lazy"
-                />
-              </button>
-              <figcaption style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 4 }}>
-                {item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                {group.photos.map((photo) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => setLightbox(group)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      padding: 0,
+                      border: "none",
+                      background: "none",
+                      cursor: "zoom-in",
+                    }}
+                    aria-label="View full size"
+                  >
+                    <img
+                      src={`/api/media/${photo.r2_public_key}`}
+                      alt={group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                      style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
+                      loading="lazy"
+                    />
+                  </button>
+                ))}
+              </div>
+              <figcaption style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 8 }}>
+                {group.photos.length > 1 && (
+                  <span style={{ display: "block", fontWeight: 600, marginBottom: 2 }}>
+                    {group.photos.length} photos — same delivery
+                  </span>
+                )}
+                {group.senderCaption && (
+                  <span style={{ display: "block", fontStyle: "italic", marginBottom: 2 }}>
+                    "{group.senderCaption}"
+                  </span>
+                )}
+                {group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
               </figcaption>
             </figure>
           ))}
@@ -117,11 +155,46 @@ export default function ImpactApp() {
             cursor: "zoom-out",
           }}
         >
-          <img
-            src={`/api/media/${lightbox.r2_public_key}`}
-            alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-            style={{ maxWidth: "100%", maxHeight: "85vh", borderRadius: 8, objectFit: "contain" }}
-          />
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              justifyContent: "center",
+              maxWidth: "90vw",
+              maxHeight: "75vh",
+            }}
+          >
+            {lightbox.photos.map((photo) => (
+              <img
+                key={photo.id}
+                src={`/api/media/${photo.r2_public_key}`}
+                alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "75vh",
+                  width: lightbox.photos.length > 1 ? "auto" : undefined,
+                  borderRadius: 8,
+                  objectFit: "contain",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ))}
+          </div>
+          {lightbox.senderCaption && (
+            <p
+              style={{
+                color: "var(--text)",
+                marginTop: 16,
+                fontSize: 18,
+                fontStyle: "italic",
+                textAlign: "center",
+                maxWidth: "80ch",
+              }}
+            >
+              "{lightbox.senderCaption}"
+            </p>
+          )}
           <p style={{ color: "var(--text)", marginTop: 12, fontSize: 20, textAlign: "center", maxWidth: "80ch" }}>
             {lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
           </p>
