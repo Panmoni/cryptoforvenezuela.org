@@ -134,6 +134,18 @@ export default function DonationWidget() {
           <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
             <canvas ref={canvasRef} width={220} height={220} style={{ borderRadius: 8, background: "#fff" }} />
             <div style={{ flex: 1, minWidth: 220 }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: "var(--accent)",
+                  margin: "0 0 6px",
+                }}
+              >
+                Send here — {sendingToken ? "SOL or any SPL token" : "any amount"}
+              </p>
               <p className="mono" style={{ wordBreak: "break-all", fontSize: 15 }}>
                 {target.address}
               </p>
@@ -142,16 +154,34 @@ export default function DonationWidget() {
               </button>
 
               {chain === "solana" && sendingToken && (
-                <div style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 12 }}>
-                  <p>
-                    Same wallet address for any SPL token — your wallet resolves the token account
-                    automatically, no need to type anything different.
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 12,
+                    borderRadius: "var(--radius)",
+                    border: "1px dashed var(--border)",
+                    background: "var(--bg)",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "var(--text-dim)",
+                      margin: "0 0 6px",
+                    }}
+                  >
+                    Verify only — not a send address
                   </p>
-                  <p style={{ marginTop: 8 }}>
-                    For verification: USDC sent here lands in this token account —{" "}
-                    <span className="mono" style={{ wordBreak: "break-all" }}>
-                      {usdcTokenAccount}
-                    </span>
+                  <p style={{ fontSize: 13, color: "var(--text-dim)" }}>
+                    Your wallet resolves the token account for you — always send to the address above, for
+                    SOL and every SPL token alike. This is where USDC specifically ends up on-chain, shown so
+                    you can independently confirm it after sending:
+                  </p>
+                  <p className="mono" style={{ fontSize: 13, color: "var(--text-dim)", wordBreak: "break-all", marginTop: 8 }}>
+                    {usdcTokenAccount}
                   </p>
                 </div>
               )}
