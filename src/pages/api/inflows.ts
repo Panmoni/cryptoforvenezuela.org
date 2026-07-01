@@ -47,7 +47,10 @@ async function fetchValuation(totals: Record<string, number>): Promise<{ usd: nu
 }
 
 export const GET: APIRoute = async () => {
-  const rows = await getInflows(env.DB);
+  // High enough to cover every inflow this pro-bono site will realistically
+  // see — totals below are summed over this same set, so it must be "all of
+  // them", not just the most recent page.
+  const rows = await getInflows(env.DB, 5000);
   const totals = rows.reduce<Record<string, number>>((acc, r) => {
     const key = `${r.chain}:${r.token}`;
     acc[key] = (acc[key] ?? 0) + Number(r.amount);

@@ -14,10 +14,13 @@ const EXPLORERS: Record<InflowRow["chain"], (tx: string) => string> = {
   ethereum: (tx) => `https://etherscan.io/tx/${tx}`,
 };
 
+const PAGE_SIZE = 10;
+
 export default function ReceivedApp() {
   const [recent, setRecent] = useState<InflowRow[] | null>(null);
   const [totals, setTotals] = useState<Record<string, number> | null>(null);
   const [valuation, setValuation] = useState<{ usd: number; ves: number } | null>(null);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     const load = () =>
@@ -59,7 +62,7 @@ export default function ReceivedApp() {
 
       <section className="section">
         <h2>Recent transfers</h2>
-        {recent?.map((row) => (
+        {recent?.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE).map((row) => (
           <div key={row.tx_hash} className="card" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>
               {row.amount} {row.token} on {row.chain}
@@ -77,6 +80,24 @@ export default function ReceivedApp() {
             </span>
           </div>
         ))}
+        {recent && recent.length > PAGE_SIZE && (
+          <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "center", marginTop: 12 }}>
+            <button type="button" className="button secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </button>
+            <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
+              Page {page + 1} of {Math.ceil(recent.length / PAGE_SIZE)}
+            </span>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={page >= Math.ceil(recent.length / PAGE_SIZE) - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
