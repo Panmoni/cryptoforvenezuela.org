@@ -170,6 +170,9 @@ function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }
                 key={p.id}
                 src={`/api/admin/media/${p.id}`}
                 controls
+                autoPlay
+                muted
+                playsInline
                 style={{ width: group.photos.length > 1 ? 104 : 220, borderRadius: 8 }}
               />
             ) : (

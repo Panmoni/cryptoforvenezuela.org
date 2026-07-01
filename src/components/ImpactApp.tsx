@@ -121,7 +121,11 @@ export default function ImpactApp() {
                       {photo.media_kind === "video" ? (
                         <video
                           src={`/api/media/${photo.r2_public_key}`}
+                          autoPlay
+                          loop
                           muted
+                          playsInline
+                          preload="metadata"
                           style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
                         />
                       ) : (
@@ -234,6 +238,9 @@ export default function ImpactApp() {
                   key={photo.id}
                   src={`/api/media/${photo.r2_public_key}`}
                   controls
+                  autoPlay
+                  muted
+                  playsInline
                   style={{
                     maxWidth: "100%",
                     maxHeight: lightbox.photos.length > 1 ? "50vh" : "65vh",

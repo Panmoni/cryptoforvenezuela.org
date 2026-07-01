@@ -142,7 +142,12 @@ function pickMedia(
     return { file_id: message.animation.file_id, file_size: message.animation.file_size, kind: "video" };
   }
   if (message.document) {
-    return { file_id: message.document.file_id, file_size: message.document.file_size, kind: "document" };
+    // Telegram's "send as file" path (bigger clips, or the sender's app
+    // just chose it) puts a video under `document` instead of `video` —
+    // same MP4 bytes, different message field. Classify by mime type so it
+    // still gets a video player instead of a bare download link.
+    const kind = message.document.mime_type?.startsWith("video/") ? "video" : "document";
+    return { file_id: message.document.file_id, file_size: message.document.file_size, kind };
   }
   return null;
 }
