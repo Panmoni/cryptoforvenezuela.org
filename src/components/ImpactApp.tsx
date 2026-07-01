@@ -45,6 +45,15 @@ export default function ImpactApp() {
   }, []);
 
   useEffect(() => {
+    if (!lightbox) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [lightbox]);
+
+  useEffect(() => {
     const qs = filter ? `?category=${encodeURIComponent(filter)}` : "";
     setPage(0);
     fetch(`/api/gallery${qs}`)
