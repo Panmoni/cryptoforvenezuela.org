@@ -29,8 +29,14 @@ export const POST: APIRoute = async ({ request }) => {
     }
     const originalBytes = await object.arrayBuffer();
     const publicBytes = row.media_kind === "photo" ? stripJpegExif(originalBytes) : originalBytes;
+    // Ingestion (workers/vision-extract) stores the real content-type from
+    // Telegram's file response; this default only covers the unlikely case
+    // that's missing, and must match the kind — a video served as
+    // image/jpeg won't play in a <video> element.
+    const fallbackContentType =
+      row.media_kind === "photo" ? "image/jpeg" : row.media_kind === "video" ? "video/mp4" : "application/octet-stream";
     await MEDIA_PUBLIC.put(row.r2_pending_key, publicBytes, {
-      httpMetadata: { contentType: object.httpMetadata?.contentType ?? "image/jpeg" },
+      httpMetadata: { contentType: object.httpMetadata?.contentType ?? fallbackContentType },
     });
     r2PublicKeys[row.id] = row.r2_pending_key;
   }

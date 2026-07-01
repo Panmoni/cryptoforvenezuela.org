@@ -97,29 +97,37 @@ export async function listNeedsReview(db: D1Database): Promise<NeedsReviewGroup[
   return [...groups.values()];
 }
 
+/** One card per group, same as the public gallery and the review queue —
+ * a LEFT JOIN (not INNER) because a general-evidence group with no
+ * itemized `impact` rows (see approveMediaGroup) must still show up here
+ * to be correctable, not just groups that have countable items. */
 export async function listLive(db: D1Database, limit = 50): Promise<LiveItem[]> {
   const { results } = await db
     .prepare(
-      `SELECT m.id, m.received_at, m.r2_public_key, i.category, i.item_name, i.count
+      `SELECT m.id, m.received_at, m.r2_public_key, m.media_group_id, m.category, i.item_name, i.count
        FROM media m
-       JOIN impact i ON i.media_id = m.id
+       LEFT JOIN impact i ON i.media_id = m.id
        WHERE m.status = 'live'
        ORDER BY m.received_at DESC
        LIMIT ?`,
     )
-    .bind(limit * 10) // generous row cap; grouped down to `limit` media items below
+    .bind(limit * 10) // generous row cap; grouped down to `limit` groups below
     .all<{
       id: string;
       received_at: number;
       r2_public_key: string | null;
-      category: string;
-      item_name: string;
-      count: number;
+      media_group_id: string | null;
+      category: string | null;
+      item_name: string | null;
+      count: number | null;
     }>();
 
-  const byMedia = new Map<string, LiveItem>();
+  const byGroup = new Map<string, LiveItem>();
+  const order: string[] = [];
   for (const row of results) {
-    let entry = byMedia.get(row.id);
+    if (!row.category) continue; // shouldn't happen post-approve, but don't surface a broken card
+    const key = row.media_group_id ?? row.id;
+    let entry = byGroup.get(key);
     if (!entry) {
       entry = {
         id: row.id,
@@ -128,11 +136,12 @@ export async function listLive(db: D1Database, limit = 50): Promise<LiveItem[]> 
         category: row.category,
         items: [],
       };
-      byMedia.set(row.id, entry);
+      byGroup.set(key, entry);
+      order.push(key);
     }
-    entry.items.push({ name: row.item_name, count: row.count });
+    if (row.item_name !== null && row.count !== null) entry.items.push({ name: row.item_name, count: row.count });
   }
-  return [...byMedia.values()].slice(0, limit);
+  return order.slice(0, limit).map((k) => byGroup.get(k)!);
 }
 
 /**
@@ -153,8 +162,10 @@ export async function approveMediaGroup(
   const statements = [
     ...req.mediaIds.map((id) =>
       db
-        .prepare(`UPDATE media SET status = 'live', r2_public_key = ? WHERE id = ? AND status = 'needs_review'`)
-        .bind(r2PublicKeys[id], id),
+        .prepare(
+          `UPDATE media SET status = 'live', r2_public_key = ?, category = ? WHERE id = ? AND status = 'needs_review'`,
+        )
+        .bind(r2PublicKeys[id], req.category, id),
     ),
     ...req.items.map((item) =>
       db
@@ -251,7 +262,7 @@ export interface PublicMediaGroup {
   category: string;
   items: { name: string; count: number }[];
   senderCaption: string | null;
-  photos: { id: string; r2_public_key: string }[];
+  photos: { id: string; r2_public_key: string; media_kind: string }[];
 }
 
 /** Public gallery feed — every counter on /impact links back here, filtered
@@ -261,11 +272,12 @@ export interface PublicMediaGroup {
  * Grouped by the same media_group_id used in admin review (see
  * listNeedsReview / approveMediaGroup) — a multi-photo Telegram post shows
  * as one card here too, not as separate unrelated tiles, and carries the
- * sender's own caption alongside the AI-derived item breakdown. Impact
- * rows live only on the group's primary media id, but every photo in the
- * group still shows up as supporting evidence. Dataset is small (a
- * pro-bono relief site, not a high-volume feed), so this groups and
- * paginates in JS rather than a multi-way SQL join. */
+ * sender's own caption alongside the AI-derived item breakdown. Category
+ * is stamped on every row in the group at approve time, so a group shows
+ * up here even with zero items (e.g. a general-evidence video that isn't a
+ * photo of specific countable supplies) — items is just empty for those.
+ * Dataset is small (a pro-bono relief site, not a high-volume feed), so
+ * this groups and paginates in JS rather than a multi-way SQL join. */
 export async function listPublicMedia(
   db: D1Database,
   opts: { category?: string; limit?: number; offset?: number } = {},
@@ -276,61 +288,54 @@ export async function listPublicMedia(
   const [{ results: liveRows }, { results: impactRows }] = await Promise.all([
     db
       .prepare(
-        `SELECT id, received_at, r2_public_key, media_group_id, sender_caption FROM media WHERE status = 'live' ORDER BY received_at DESC`,
+        `SELECT id, received_at, r2_public_key, media_kind, media_group_id, sender_caption, category
+         FROM media WHERE status = 'live' ORDER BY received_at DESC`,
       )
       .all<{
         id: string;
         received_at: number;
         r2_public_key: string | null;
+        media_kind: string;
         media_group_id: string | null;
         sender_caption: string | null;
+        category: string | null;
       }>(),
     db
-      .prepare(`SELECT media_id, category, item_name, count FROM impact`)
-      .all<{ media_id: string; category: string; item_name: string; count: number }>(),
+      .prepare(`SELECT media_id, item_name, count FROM impact`)
+      .all<{ media_id: string; item_name: string; count: number }>(),
   ]);
 
-  const impactByMedia = new Map<string, { category: string; items: { name: string; count: number }[] }>();
+  const itemsByMedia = new Map<string, { name: string; count: number }[]>();
   for (const row of impactRows) {
-    let entry = impactByMedia.get(row.media_id);
-    if (!entry) {
-      entry = { category: row.category, items: [] };
-      impactByMedia.set(row.media_id, entry);
-    }
-    entry.items.push({ name: row.item_name, count: row.count });
-  }
-
-  const impactByGroup = new Map<string, { category: string; items: { name: string; count: number }[] }>();
-  for (const row of liveRows) {
-    const key = row.media_group_id ?? row.id;
-    const own = impactByMedia.get(row.id);
-    if (own && !impactByGroup.has(key)) impactByGroup.set(key, own);
+    const list = itemsByMedia.get(row.media_id) ?? [];
+    list.push({ name: row.item_name, count: row.count });
+    itemsByMedia.set(row.media_id, list);
   }
 
   const groups = new Map<string, PublicMediaGroup>();
   const order: string[] = [];
   for (const row of liveRows) {
-    if (!row.r2_public_key) continue;
+    if (!row.r2_public_key || !row.category) continue; // shouldn't happen post-approve, but don't surface a broken card
+    if (opts.category && row.category !== opts.category) continue;
     const key = row.media_group_id ?? row.id;
-    const impact = impactByGroup.get(key);
-    if (!impact) continue; // orphaned live row with no group impact — shouldn't happen, but don't surface it
-    if (opts.category && impact.category !== opts.category) continue;
 
     let group = groups.get(key);
     if (!group) {
       group = {
         groupId: key,
         received_at: row.received_at,
-        category: impact.category,
-        items: impact.items,
+        category: row.category,
+        items: [],
         senderCaption: row.sender_caption,
         photos: [],
       };
       groups.set(key, group);
       order.push(key);
     }
-    group.photos.push({ id: row.id, r2_public_key: row.r2_public_key });
+    group.photos.push({ id: row.id, r2_public_key: row.r2_public_key, media_kind: row.media_kind });
     group.senderCaption ??= row.sender_caption;
+    const own = itemsByMedia.get(row.id);
+    if (own) group.items.push(...own);
   }
 
   return order.slice(offset, offset + limit).map((k) => groups.get(k)!);

@@ -9,6 +9,7 @@ interface CounterRow {
 interface GalleryPhoto {
   id: string;
   r2_public_key: string;
+  media_kind: string;
 }
 
 interface GalleryGroup {
@@ -117,12 +118,20 @@ export default function ImpactApp() {
                 >
                   {previewPhotos.map((photo, i) => (
                     <div key={photo.id} style={{ position: "relative" }}>
-                      <img
-                        src={`/api/media/${photo.r2_public_key}`}
-                        alt={group.items.map((it) => `${it.count} ${it.name}`).join(", ")}
-                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
-                        loading="lazy"
-                      />
+                      {photo.media_kind === "video" ? (
+                        <video
+                          src={`/api/media/${photo.r2_public_key}`}
+                          muted
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                        />
+                      ) : (
+                        <img
+                          src={`/api/media/${photo.r2_public_key}`}
+                          alt={group.items.map((it) => `${it.count} ${it.name}`).join(", ")}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                          loading="lazy"
+                        />
+                      )}
                       {i === previewPhotos.length - 1 && hiddenCount > 0 && (
                         <div
                           style={{
@@ -161,7 +170,9 @@ export default function ImpactApp() {
                     <strong style={{ color: "var(--text-dim)" }}>{group.photos.length} photos — same delivery. </strong>
                   )}
                   {group.senderCaption && <em>"{group.senderCaption}" — </em>}
-                  {group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                  {group.items.length > 0
+                    ? group.items.map((i) => `${i.count} ${i.name}`).join(", ")
+                    : !group.senderCaption && "General evidence"}
                 </figcaption>
               </figure>
             );
@@ -217,22 +228,37 @@ export default function ImpactApp() {
               flexShrink: 0,
             }}
           >
-            {lightbox.photos.map((photo) => (
-              <img
-                key={photo.id}
-                src={`/api/media/${photo.r2_public_key}`}
-                alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: lightbox.photos.length > 1 ? "50vh" : "65vh",
-                  width: lightbox.photos.length > 1 ? "auto" : undefined,
-                  borderRadius: 8,
-                  objectFit: "contain",
-                  display: "block",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ))}
+            {lightbox.photos.map((photo) =>
+              photo.media_kind === "video" ? (
+                <video
+                  key={photo.id}
+                  src={`/api/media/${photo.r2_public_key}`}
+                  controls
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: lightbox.photos.length > 1 ? "50vh" : "65vh",
+                    width: lightbox.photos.length > 1 ? "auto" : undefined,
+                    borderRadius: 8,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  key={photo.id}
+                  src={`/api/media/${photo.r2_public_key}`}
+                  alt={lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: lightbox.photos.length > 1 ? "50vh" : "65vh",
+                    width: lightbox.photos.length > 1 ? "auto" : undefined,
+                    borderRadius: 8,
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ),
+            )}
           </div>
           {lightbox.senderCaption && (
             <p
@@ -248,9 +274,11 @@ export default function ImpactApp() {
               "{lightbox.senderCaption}"
             </p>
           )}
-          <p style={{ color: "var(--text)", marginTop: 12, fontSize: 20, textAlign: "center", maxWidth: "80ch" }}>
-            {lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-          </p>
+          {lightbox.items.length > 0 && (
+            <p style={{ color: "var(--text)", marginTop: 12, fontSize: 20, textAlign: "center", maxWidth: "80ch" }}>
+              {lightbox.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+            </p>
+          )}
           <button
             type="button"
             className="button secondary"

@@ -118,7 +118,12 @@ function ReviewCard({ group, onDone }: { group: QueueGroup; onDone: () => void }
   async function approve() {
     if (!category) return alert("Pick a category first.");
     const namedItems = items.filter((i) => i.name.trim());
-    if (namedItems.length === 0) return alert("Add at least one item (with a name) before approving.");
+    if (
+      namedItems.length === 0 &&
+      !confirm("No items listed — this publishes as general evidence without adding to the delivery counters. Continue?")
+    ) {
+      return;
+    }
     setBusy(true);
     const res = await fetch("/api/admin/approve", {
       method: "POST",
@@ -268,7 +273,8 @@ function LiveCard({ item, onDone }: { item: LiveItem; onDone: () => void }) {
   return (
     <div className="card" style={{ marginBottom: 12, display: "flex", gap: 16, alignItems: "center" }}>
       <div style={{ flex: 1 }}>
-        <strong>{item.category}</strong> — {item.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+        <strong>{item.category}</strong>
+        {item.items.length > 0 ? ` — ${item.items.map((i) => `${i.count} ${i.name}`).join(", ")}` : " — general evidence"}
         <div style={{ color: "var(--text-dim)", fontSize: 13 }}>{new Date(item.received_at).toLocaleString()}</div>
       </div>
       <button type="button" className="button secondary" disabled={busy} onClick={unpublish}>

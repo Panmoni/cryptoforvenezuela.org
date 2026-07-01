@@ -36,14 +36,16 @@ export type MediaStatus = z.infer<typeof MediaStatusSchema>;
 export const ApproveRequestSchema = z.object({
   mediaIds: z.array(z.string().min(1)).min(1),
   category: z.enum(CATEGORIES),
-  items: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        count: z.number().int().nonnegative(),
-      }),
-    )
-    .min(1),
+  // Empty is allowed: not every approved post is a countable photo of
+  // specific supplies (e.g. a general shopping/delivery video) — it still
+  // publishes and shows in the gallery, it just contributes nothing to the
+  // item counters.
+  items: z.array(
+    z.object({
+      name: z.string().min(1),
+      count: z.number().int().nonnegative(),
+    }),
+  ),
 });
 export type ApproveRequest = z.infer<typeof ApproveRequestSchema>;
 

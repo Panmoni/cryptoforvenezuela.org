@@ -45,8 +45,10 @@ export default {
 };
 
 async function processOne({ mediaId, fileId, caption, kind }: VisionQueueMessage, env: Env): Promise<void> {
-  const bytes = await downloadTelegramFile(env.TELEGRAM_BOT_TOKEN, fileId);
-  await env.MEDIA_PENDING.put(mediaId, bytes);
+  const { bytes, contentType } = await downloadTelegramFile(env.TELEGRAM_BOT_TOKEN, fileId);
+  await env.MEDIA_PENDING.put(mediaId, bytes, {
+    httpMetadata: { contentType: contentType ?? undefined },
+  });
 
   // The Anthropic call below only understands still images — sending video/
   // document bytes mislabeled as image/jpeg just fails silently. Skip it
@@ -75,7 +77,10 @@ async function processOne({ mediaId, fileId, caption, kind }: VisionQueueMessage
   }
 }
 
-async function downloadTelegramFile(token: string, fileId: string): Promise<ArrayBuffer> {
+async function downloadTelegramFile(
+  token: string,
+  fileId: string,
+): Promise<{ bytes: ArrayBuffer; contentType: string | null }> {
   const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`);
   const fileJson = (await fileRes.json()) as { ok: boolean; result?: { file_path?: string } };
   if (!fileJson.ok || !fileJson.result?.file_path) {
@@ -85,7 +90,7 @@ async function downloadTelegramFile(token: string, fileId: string): Promise<Arra
   if (!bytesRes.ok) {
     throw new Error(`Telegram file download failed: ${bytesRes.status}`);
   }
-  return bytesRes.arrayBuffer();
+  return { bytes: await bytesRes.arrayBuffer(), contentType: bytesRes.headers.get("content-type") };
 }
 
 /**
