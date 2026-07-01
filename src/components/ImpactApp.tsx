@@ -20,11 +20,14 @@ interface GalleryGroup {
   photos: GalleryPhoto[];
 }
 
+const PAGE_SIZE = 10;
+
 export default function ImpactApp() {
   const [counters, setCounters] = useState<CounterRow[] | null>(null);
   const [gallery, setGallery] = useState<GalleryGroup[] | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<GalleryGroup | null>(null);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     fetch("/api/counters")
@@ -34,6 +37,7 @@ export default function ImpactApp() {
 
   useEffect(() => {
     const qs = filter ? `?category=${encodeURIComponent(filter)}` : "";
+    setPage(0);
     fetch(`/api/gallery${qs}`)
       .then((r) => r.json<{ items: GalleryGroup[] }>())
       .then((d) => setGallery(d.items));
@@ -81,55 +85,106 @@ export default function ImpactApp() {
           </button>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-          {gallery?.map((group) => (
-            <figure
-              key={group.groupId}
-              className={group.photos.length > 1 ? "card" : undefined}
-              role="button"
-              tabIndex={0}
-              aria-label="View full size"
-              onClick={() => setLightbox(group)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setLightbox(group);
-                }
-              }}
-              style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0, cursor: "zoom-in" }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: group.photos.length > 1 ? "repeat(2, 1fr)" : "1fr",
-                  gap: 4,
+          {gallery?.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE).map((group) => {
+            const previewPhotos = group.photos.slice(0, 4);
+            const hiddenCount = group.photos.length - previewPhotos.length;
+            return (
+              <figure
+                key={group.groupId}
+                className={group.photos.length > 1 ? "card" : undefined}
+                role="button"
+                tabIndex={0}
+                aria-label="View full size"
+                onClick={() => setLightbox(group)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setLightbox(group);
+                  }
                 }}
+                style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0, cursor: "zoom-in" }}
               >
-                {group.photos.map((photo) => (
-                  <img
-                    key={photo.id}
-                    src={`/api/media/${photo.r2_public_key}`}
-                    alt={group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-                    style={{ width: "100%", aspectRatio: "1", objectFit: "cover", borderRadius: 8 }}
-                    loading="lazy"
-                  />
-                ))}
-              </div>
-              <figcaption style={{ fontSize: 13, color: "var(--text)", marginTop: 8 }}>
-                {group.photos.length > 1 && (
-                  <span style={{ display: "block", fontWeight: 600, marginBottom: 2, color: "var(--text-dim)" }}>
-                    {group.photos.length} photos — same delivery
-                  </span>
-                )}
-                {group.senderCaption && (
-                  <span style={{ display: "block", fontStyle: "italic", marginBottom: 4 }}>
-                    "{group.senderCaption}"
-                  </span>
-                )}
-                {group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
-              </figcaption>
-            </figure>
-          ))}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: previewPhotos.length > 1 ? "repeat(2, 1fr)" : "1fr",
+                    gridAutoRows: "1fr",
+                    gap: 4,
+                    height: 200,
+                    overflow: "hidden",
+                    borderRadius: 8,
+                  }}
+                >
+                  {previewPhotos.map((photo, i) => (
+                    <div key={photo.id} style={{ position: "relative" }}>
+                      <img
+                        src={`/api/media/${photo.r2_public_key}`}
+                        alt={group.items.map((it) => `${it.count} ${it.name}`).join(", ")}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                        loading="lazy"
+                      />
+                      {i === previewPhotos.length - 1 && hiddenCount > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "rgba(0,0,0,0.55)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontWeight: 700,
+                            fontSize: 18,
+                            borderRadius: 8,
+                          }}
+                        >
+                          +{hiddenCount}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <figcaption
+                  style={{
+                    fontSize: 13,
+                    color: "var(--text)",
+                    marginTop: 8,
+                    height: 74,
+                    lineHeight: 1.4,
+                    overflow: "hidden",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: "vertical",
+                  }}
+                >
+                  {group.photos.length > 1 && (
+                    <strong style={{ color: "var(--text-dim)" }}>{group.photos.length} photos — same delivery. </strong>
+                  )}
+                  {group.senderCaption && <em>"{group.senderCaption}" — </em>}
+                  {group.items.map((i) => `${i.count} ${i.name}`).join(", ")}
+                </figcaption>
+              </figure>
+            );
+          })}
         </div>
+        {gallery && gallery.length > PAGE_SIZE && (
+          <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "center", marginTop: 16 }}>
+            <button type="button" className="button secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </button>
+            <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
+              Page {page + 1} of {Math.ceil(gallery.length / PAGE_SIZE)}
+            </span>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={page >= Math.ceil(gallery.length / PAGE_SIZE) - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </button>
+          </div>
+        )}
         {gallery?.length === 0 && <p style={{ color: "var(--text-dim)" }}>No photos in this category yet.</p>}
       </section>
 
