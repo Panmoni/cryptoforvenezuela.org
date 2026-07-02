@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 interface InflowRow {
   tx_hash: string;
-  chain: "solana" | "ethereum";
+  chain: "solana" | "ethereum" | "bitcoin" | "bnb" | "bitcoincash";
   from_addr: string;
   amount: string;
   token: string;
@@ -12,6 +12,9 @@ interface InflowRow {
 const EXPLORERS: Record<InflowRow["chain"], (tx: string) => string> = {
   solana: (tx) => `https://solscan.io/tx/${tx}`,
   ethereum: (tx) => `https://etherscan.io/tx/${tx}`,
+  bitcoin: (tx) => `https://mempool.space/tx/${tx}`,
+  bnb: (tx) => `https://bscscan.com/tx/${tx}`,
+  bitcoincash: (tx) => `https://blockchair.com/bitcoin-cash/transaction/${tx}`,
 };
 
 const PAGE_SIZE = 10;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import QRCode from "qrcode";
 import { PublicKey } from "@solana/web3.js";
 import { ADDRESS_ALERT, CANONICAL_ANCHOR_URL, RECIPIENT_ADDRESSES, type ChainKey } from "../config/addresses";
@@ -25,32 +25,69 @@ function deriveAssociatedTokenAddress(owner: PublicKey, mint: PublicKey): string
   return ata.toBase58();
 }
 
+const SOLANA_ICON = (
+  <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <defs>
+      <linearGradient id="solana-grad" x1="2" y1="26" x2="30" y2="6">
+        <stop offset="0" stopColor="#9945FF" />
+        <stop offset="1" stopColor="#14F195" />
+      </linearGradient>
+    </defs>
+    <path d="M7 21.5L10.5 18H27L23.5 21.5Z" fill="url(#solana-grad)" />
+    <path d="M7 10.5L10.5 7H27L23.5 10.5Z" fill="url(#solana-grad)" />
+    <path d="M23.5 16L27 12.5H10.5L7 16Z" fill="url(#solana-grad)" />
+  </svg>
+);
+
+const ETHEREUM_ICON = (
+  <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path d="M16 1L16 12.8L26.5 17.8Z" fill="#8A92B2" />
+    <path d="M16 1L5.5 17.8L16 12.8Z" fill="#62688F" />
+    <path d="M16 20.2L16 30.9L26.5 20Z" fill="#8A92B2" />
+    <path d="M16 30.9L16 20.2L5.5 20Z" fill="#62688F" />
+    <path d="M16 18.4L26.5 17.8L16 12.8Z" fill="#454A75" />
+    <path d="M5.5 17.8L16 18.4L16 12.8Z" fill="#8A92B2" />
+  </svg>
+);
+
+// Simple Icons brand marks — single-color, official hex per icon.
+const BITCOIN_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path
+      fill="#F7931A"
+      d="M23.638 14.904c-1.602 6.43-8.113 10.34-14.542 8.736C2.67 22.05-1.244 15.525.362 9.105 1.962 2.67 8.475-1.243 14.9.358c6.43 1.605 10.342 8.115 8.738 14.548v-.002zm-6.35-4.613c.24-1.59-.974-2.45-2.64-3.03l.54-2.153-1.315-.33-.525 2.107c-.345-.087-.705-.167-1.064-.25l.526-2.127-1.32-.33-.54 2.165c-.285-.067-.565-.132-.84-.2l-1.815-.45-.35 1.407s.975.225.955.236c.535.136.63.486.615.766l-1.477 5.92c-.075.166-.24.406-.614.314.015.02-.96-.24-.96-.24l-.66 1.51 1.71.426.93.242-.54 2.19 1.32.327.54-2.17c.36.1.705.19 1.05.273l-.51 2.154 1.32.33.545-2.19c2.24.427 3.93.257 4.64-1.774.57-1.637-.03-2.58-1.217-3.196.854-.193 1.5-.76 1.68-1.93h.01zm-3.01 4.22c-.404 1.64-3.157.75-4.05.53l.72-2.9c.896.23 3.757.67 3.33 2.37zm.41-4.24c-.37 1.49-2.662.735-3.405.55l.654-2.64c.744.18 3.137.524 2.75 2.084v.006z"
+    />
+  </svg>
+);
+
+const BNB_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path
+      fill="#F0B90B"
+      d="M5.631 3.676 12.001 0l6.367 3.676-2.34 1.358L12 2.716 7.972 5.034l-2.34-1.358Zm12.737 4.636-2.34-1.358L12 9.272 7.972 6.954l-2.34 1.358v2.716l4.026 2.318v4.636L12 19.341l2.341-1.359v-4.636l4.027-2.318V8.312Zm0 7.352v-2.716l-2.34 1.358v2.716l2.34-1.358Zm1.663.96-4.027 2.318v2.717l6.368-3.677V10.63l-2.34 1.358v4.636Zm-2.34-10.63 2.34 1.358v2.716l2.341-1.358V5.994l-2.34-1.358-2.342 1.358ZM9.657 19.926v2.716L12 24l2.341-1.358v-2.716l-2.34 1.358-2.343-1.358Zm-4.027-4.262 2.341 1.358v-2.716l-2.34-1.358v2.716Zm4.027-9.67L12 7.352l2.341-1.358-2.34-1.358-2.343 1.358Zm-5.69 1.358L6.31 5.994 3.968 4.636l-2.34 1.358V8.71l2.34 1.358V7.352Zm0 4.636-2.34-1.358v7.352l6.368 3.677v-2.717l-4.028-2.318v-4.636Z"
+    />
+  </svg>
+);
+
+const BITCOIN_CASH_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path
+      fill="#0AC18E"
+      d="m10.84 11.22-.688-2.568c.728-.18 2.839-1.051 3.39.506.27 1.682-1.978 1.877-2.702 2.062zm.289 1.313.755 2.829c.868-.228 3.496-.46 3.241-2.351-.433-1.666-3.125-.706-3.996-.478zM24 12c0 6.627-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0s12 5.373 12 12zm-6.341.661c-.183-1.151-1.441-2.095-2.485-2.202.643-.57.969-1.401.57-2.488-.603-1.368-1.989-1.66-3.685-1.377l-.546-2.114-1.285.332.536 2.108c-.338.085-.685.158-1.029.256L9.198 5.08l-1.285.332.545 2.114c-.277.079-2.595.673-2.595.673l.353 1.377s.944-.265.935-.244c.524-.137.771.125.886.372l1.498 5.793c.018.168-.012.454-.372.551.021.012-.935.241-.935.241l.14 1.605s2.296-.588 2.598-.664l.551 2.138 1.285-.332-.551-2.153c.353-.082.697-.168 1.032-.256l.548 2.141 1.285-.332-.551-2.135c1.982-.482 3.38-1.73 3.094-3.64z"
+    />
+  </svg>
+);
+
+const CHAIN_ICONS: Record<ChainKey, ReactElement> = {
+  solana: SOLANA_ICON,
+  ethereum: ETHEREUM_ICON,
+  bitcoin: BITCOIN_ICON,
+  bnb: BNB_ICON,
+  bitcoincash: BITCOIN_CASH_ICON,
+};
+
 function ChainIcon({ chain }: { chain: ChainKey }) {
-  if (chain === "solana") {
-    return (
-      <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
-        <defs>
-          <linearGradient id="solana-grad" x1="2" y1="26" x2="30" y2="6">
-            <stop offset="0" stopColor="#9945FF" />
-            <stop offset="1" stopColor="#14F195" />
-          </linearGradient>
-        </defs>
-        <path d="M7 21.5L10.5 18H27L23.5 21.5Z" fill="url(#solana-grad)" />
-        <path d="M7 10.5L10.5 7H27L23.5 10.5Z" fill="url(#solana-grad)" />
-        <path d="M23.5 16L27 12.5H10.5L7 16Z" fill="url(#solana-grad)" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 32 32" width="16" height="16" aria-hidden="true" style={{ flexShrink: 0 }}>
-      <path d="M16 1L16 12.8L26.5 17.8Z" fill="#8A92B2" />
-      <path d="M16 1L5.5 17.8L16 12.8Z" fill="#62688F" />
-      <path d="M16 20.2L16 30.9L26.5 20Z" fill="#8A92B2" />
-      <path d="M16 30.9L16 20.2L5.5 20Z" fill="#62688F" />
-      <path d="M16 18.4L26.5 17.8L16 12.8Z" fill="#454A75" />
-      <path d="M5.5 17.8L16 18.4L16 12.8Z" fill="#8A92B2" />
-    </svg>
-  );
+  return CHAIN_ICONS[chain];
 }
 
 export default function DonationWidget() {

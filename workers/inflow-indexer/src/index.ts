@@ -34,10 +34,17 @@ export default {
 };
 
 async function pollAll(env: Env) {
-  const [solana, ethereum] = await Promise.allSettled([pollSolana(env), pollEthereum(env)]);
+  const [solana, ethereum, bnb, bitcoin] = await Promise.allSettled([
+    pollSolana(env),
+    pollEvm(env, "ethereum", "eth-mainnet.g.alchemy.com", RECIPIENT_ADDRESSES.ethereum.address),
+    pollEvm(env, "bnb", "bnb-mainnet.g.alchemy.com", RECIPIENT_ADDRESSES.bnb.address),
+    pollBitcoin(env),
+  ]);
   return {
     solana: solana.status === "fulfilled" ? solana.value : { error: String(solana.reason) },
     ethereum: ethereum.status === "fulfilled" ? ethereum.value : { error: String(ethereum.reason) },
+    bnb: bnb.status === "fulfilled" ? bnb.value : { error: String(bnb.reason) },
+    bitcoin: bitcoin.status === "fulfilled" ? bitcoin.value : { error: String(bitcoin.reason) },
   };
 }
 
@@ -98,7 +105,10 @@ async function pollSolana(env: Env): Promise<{ inserted: number }> {
   return { inserted: statements.length };
 }
 
-// --- Ethereum / Alchemy ---------------------------------------------------
+// --- EVM chains (Ethereum, BNB Smart Chain) / Alchemy ----------------------
+// Both are EVM-compatible, so the same `alchemy_getAssetTransfers` call
+// works for either — only the base URL (and thus which chain's data comes
+// back) differs. Same ALCHEMY_API_KEY covers both, no new secret needed.
 
 interface AlchemyTransfer {
   hash: string;
@@ -110,9 +120,8 @@ interface AlchemyTransfer {
   metadata?: { blockTimestamp?: string };
 }
 
-async function pollEthereum(env: Env): Promise<{ inserted: number }> {
-  const target = RECIPIENT_ADDRESSES.ethereum.address;
-  const res = await fetch(`https://eth-mainnet.g.alchemy.com/v2/${env.ALCHEMY_API_KEY}`, {
+async function pollEvm(env: Env, chain: "ethereum" | "bnb", alchemyHost: string, target: string): Promise<{ inserted: number }> {
+  const res = await fetch(`https://${alchemyHost}/v2/${env.ALCHEMY_API_KEY}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -141,9 +150,60 @@ async function pollEthereum(env: Env): Promise<{ inserted: number }> {
       const confirmedAt = t.metadata?.blockTimestamp ? Date.parse(t.metadata.blockTimestamp) : Date.now();
       return env.DB.prepare(
         `INSERT OR IGNORE INTO inflows (tx_hash, chain, from_addr, to_addr, token, amount, confirmed_at)
-         VALUES (?, 'ethereum', ?, ?, ?, ?, ?)`,
-      ).bind(t.hash, t.from, t.to, t.category === "external" ? "native" : (t.asset ?? "unknown"), String(t.value), confirmedAt);
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        t.hash,
+        chain,
+        t.from,
+        t.to,
+        t.category === "external" ? "native" : (t.asset ?? "unknown"),
+        String(t.value),
+        confirmedAt,
+      );
     });
+  if (statements.length) await env.DB.batch(statements);
+  return { inserted: statements.length };
+}
+
+// --- Bitcoin / mempool.space ------------------------------------------------
+// Public, free, no API key — a UTXO chain has no single "account transfer
+// log" the way Solana/EVM do, so this reads raw tx vin/vout instead: any
+// output paying our address is an inflow, "from" is a best-effort guess at
+// the first input's own address (a tx can have several inputs; there's no
+// single canonical sender on a UTXO chain).
+
+interface MempoolTx {
+  txid: string;
+  vin: { prevout?: { scriptpubkey_address?: string } }[];
+  vout: { scriptpubkey_address?: string; value: number }[];
+  status: { confirmed: boolean; block_time?: number };
+}
+
+const BTC_DECIMALS = 8;
+
+async function pollBitcoin(env: Env): Promise<{ inserted: number }> {
+  const target = RECIPIENT_ADDRESSES.bitcoin.address;
+  const res = await fetch(`https://mempool.space/api/address/${target}/txs`);
+  if (!res.ok) throw new Error(`mempool.space ${res.status}`);
+  const txs = (await res.json()) as MempoolTx[];
+
+  const statements = [];
+  for (const tx of txs) {
+    // Only confirmed txs — an unconfirmed tx would insert with an
+    // approximate confirmed_at that INSERT OR IGNORE could never correct
+    // once the real confirmation happens (tx_hash is the primary key).
+    if (!tx.status.confirmed || !tx.status.block_time) continue;
+    const fromAddr = tx.vin[0]?.prevout?.scriptpubkey_address ?? "unknown";
+    for (const out of tx.vout) {
+      if (out.scriptpubkey_address !== target) continue;
+      statements.push(
+        env.DB.prepare(
+          `INSERT OR IGNORE INTO inflows (tx_hash, chain, from_addr, to_addr, token, amount, confirmed_at)
+           VALUES (?, 'bitcoin', ?, ?, 'native', ?, ?)`,
+        ).bind(tx.txid, fromAddr, target, formatUnits(BigInt(out.value), BTC_DECIMALS), tx.status.block_time * 1000),
+      );
+    }
+  }
   if (statements.length) await env.DB.batch(statements);
   return { inserted: statements.length };
 }

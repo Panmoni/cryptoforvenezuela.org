@@ -6,7 +6,13 @@ export const prerender = false;
 
 // Stablecoins are valued 1:1 with USD; native chain coins need a live price.
 const STABLECOINS = new Set(["USDC", "USDT"]);
-const NATIVE_COINGECKO_IDS: Record<string, string> = { solana: "solana", ethereum: "ethereum" };
+const NATIVE_COINGECKO_IDS: Record<string, string> = {
+  solana: "solana",
+  ethereum: "ethereum",
+  bitcoin: "bitcoin",
+  bnb: "binancecoin",
+  bitcoincash: "bitcoin-cash",
+};
 
 async function fetchValuation(totals: Record<string, number>): Promise<{ usd: number; ves: number } | null> {
   const nativeChains = Object.keys(totals)

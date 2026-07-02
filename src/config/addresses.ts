@@ -9,6 +9,11 @@
 
 const SOLANA_ADDRESS = "He4B73HniFh2RXw6dhjHARHZZMDLTni6ZFbme7c4YUjD";
 const ETHEREUM_ADDRESS = "0x80CA70243F77d6969214f231cb60f971317Db9d1";
+const BITCOIN_ADDRESS = "bc1qr8ra9rfzzvkduaq53sm6yxv2jcqey8euntfnfv";
+// Same address as Ethereum, on purpose — BNB Smart Chain is EVM-compatible,
+// so this self-custodied wallet's address is identical across both chains.
+const BNB_ADDRESS = "0x80CA70243F77d6969214f231cb60f971317Db9d1";
+const BITCOIN_CASH_ADDRESS = "qp6ey0s0nntf4qqvpwl4vf4rzagc7xeshcxsv4rm96";
 
 export const RECIPIENT_ADDRESSES = {
   solana: {
@@ -25,6 +30,24 @@ export const RECIPIENT_ADDRESSES = {
     shortHash: "7ea87f85",
     explorerUrl: (addr: string) => `https://etherscan.io/address/${addr}`,
   },
+  bitcoin: {
+    chainLabel: "Bitcoin",
+    address: BITCOIN_ADDRESS,
+    shortHash: "b8096a9e",
+    explorerUrl: (addr: string) => `https://mempool.space/address/${addr}`,
+  },
+  bnb: {
+    chainLabel: "BNB Smart Chain",
+    address: BNB_ADDRESS,
+    shortHash: "7ea87f85",
+    explorerUrl: (addr: string) => `https://bscscan.com/address/${addr}`,
+  },
+  bitcoincash: {
+    chainLabel: "Bitcoin Cash",
+    address: BITCOIN_CASH_ADDRESS,
+    shortHash: "914a22d8",
+    explorerUrl: (addr: string) => `https://blockchair.com/bitcoin-cash/address/${addr}`,
+  },
 } as const;
 
 export type ChainKey = keyof typeof RECIPIENT_ADDRESSES;
@@ -38,6 +61,9 @@ export type ChainKey = keyof typeof RECIPIENT_ADDRESSES;
 export const ADDRESS_ALERT: Record<ChainKey, boolean> = {
   solana: false,
   ethereum: false,
+  bitcoin: false,
+  bnb: false,
+  bitcoincash: false,
 };
 
 /**

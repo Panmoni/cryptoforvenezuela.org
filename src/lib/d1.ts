@@ -351,7 +351,7 @@ export async function listPublicMedia(
 
 export interface InflowRow {
   tx_hash: string;
-  chain: "solana" | "ethereum";
+  chain: "solana" | "ethereum" | "bitcoin" | "bnb" | "bitcoincash";
   from_addr: string;
   amount: string;
   token: string;
