@@ -62,37 +62,64 @@ export default function ImpactApp() {
   }, [filter]);
 
   const total = counters?.reduce((sum, c) => sum + c.total, 0) ?? 0;
+  const categoryTotals = counters?.reduce<Record<string, number>>((acc, c) => {
+    acc[c.category] = (acc[c.category] ?? 0) + c.total;
+    return acc;
+  }, {});
 
   return (
     <div>
       <section className="section">
         <h2>{counters === null ? "…" : total.toLocaleString()} items delivered, photo-verified</h2>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
-          {counters?.map((c) => (
-            <button
-              key={`${c.category}-${c.item_name}`}
-              type="button"
-              className="card"
-              style={{
-                cursor: "pointer",
-                textAlign: "left",
-                border: filter === c.category ? "1px solid var(--accent)" : undefined,
-              }}
-              onClick={() => {
-                setFilter(c.category === filter ? null : c.category);
-                document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <div style={{ fontSize: 28, fontWeight: 700 }}>{c.total.toLocaleString()}</div>
-              <div style={{ color: "var(--text-dim)" }}>
-                {c.item_name} <span style={{ fontSize: 12 }}>({c.category})</span>
-              </div>
-            </button>
-          ))}
+          {categoryTotals &&
+            Object.entries(categoryTotals).map(([category, catTotal]) => (
+              <button
+                key={category}
+                type="button"
+                className="card"
+                style={{
+                  cursor: "pointer",
+                  textAlign: "left",
+                  border: filter === category ? "1px solid var(--accent)" : undefined,
+                }}
+                onClick={() => {
+                  setFilter(category === filter ? null : category);
+                  document.getElementById("gallery")?.scrollIntoView({ behavior: "smooth" });
+                }}
+              >
+                <div style={{ fontSize: 28, fontWeight: 700 }}>{catTotal.toLocaleString()}</div>
+                <div style={{ color: "var(--text-dim)" }}>{category}</div>
+              </button>
+            ))}
           {counters?.length === 0 && (
             <p style={{ color: "var(--text-dim)" }}>Nothing approved yet — check back soon.</p>
           )}
         </div>
+        {counters && counters.length > 0 && (
+          <details style={{ marginTop: 16 }}>
+            <summary style={{ cursor: "pointer", color: "var(--text-dim)", fontSize: 14 }}>
+              Full itemized breakdown ({counters.length} items)
+            </summary>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                columnGap: 20,
+                rowGap: 6,
+                marginTop: 12,
+                fontSize: 13,
+              }}
+            >
+              {counters.map((c) => (
+                <div key={`${c.category}-${c.item_name}`} style={{ color: "var(--text-dim)" }}>
+                  <strong style={{ color: "var(--text)" }}>{c.total.toLocaleString()}</strong> {c.item_name}{" "}
+                  <span style={{ opacity: 0.6 }}>({c.category})</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </section>
 
       <section className="section" id="gallery">
