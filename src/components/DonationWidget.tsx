@@ -121,7 +121,7 @@ export default function DonationWidget() {
 
   return (
     <div className="card" aria-live="polite">
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div className="chain-tabs" style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
         {(Object.keys(RECIPIENT_ADDRESSES) as ChainKey[]).map((key) => (
           <button
             key={key}
@@ -132,10 +132,11 @@ export default function DonationWidget() {
               setSendingToken(false);
             }}
             aria-pressed={chain === key}
+            aria-label={RECIPIENT_ADDRESSES[key].chainLabel}
             style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
             <ChainIcon chain={key} />
-            {RECIPIENT_ADDRESSES[key].chainLabel}
+            <span className="chain-tab-label">{RECIPIENT_ADDRESSES[key].chainLabel}</span>
           </button>
         ))}
       </div>

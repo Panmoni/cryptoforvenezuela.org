@@ -93,6 +93,15 @@ h3 {
   cursor: not-allowed;
 }
 
+/* Five chain tabs' full labels don't fit a phone screen — collapse
+   unselected tabs to icon-only below this width, keep the selected one
+   labeled so it's clear which chain is showing. */
+@media (max-width: 520px) {
+  .chain-tabs .button.secondary .chain-tab-label {
+    display: none;
+  }
+}
+
 .nav {
   display: flex;
   justify-content: space-between;
