@@ -8,6 +8,18 @@
 interface Env {
   ANTHROPIC_API_KEY: string;
   TELEGRAM_BOT_TOKEN: string;
+  SUBTITLES_TOOL_SECRET: string;
+}
+
+// `env` from `cloudflare:workers` is typed as `Cloudflare.Env`, not the bare
+// global `Env` above — wrangler's generated types merge project extensions
+// through this namespace, so secret-only fields need to land here too.
+declare namespace Cloudflare {
+  interface Env {
+    ANTHROPIC_API_KEY: string;
+    TELEGRAM_BOT_TOKEN: string;
+    SUBTITLES_TOOL_SECRET: string;
+  }
 }
 
 // Injected at build time via vite.define in astro.config.mjs (git short hash).
