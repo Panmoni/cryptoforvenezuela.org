@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fetchJsonWithRetry } from "../lib/fetchJson";
 
 interface CounterRow {
   category: string;
@@ -39,9 +40,9 @@ export default function ImpactApp() {
   const [page, setPage] = useState(0);
 
   useEffect(() => {
-    fetch("/api/counters")
-      .then((r) => r.json<{ counters: CounterRow[] }>())
-      .then((d) => setCounters(d.counters));
+    fetchJsonWithRetry<{ counters: CounterRow[] }>("/api/counters")
+      .then((d) => setCounters(d.counters))
+      .catch((err) => console.error("failed to load counters", err));
   }, []);
 
   useEffect(() => {
@@ -56,9 +57,9 @@ export default function ImpactApp() {
   useEffect(() => {
     const qs = filter ? `?category=${encodeURIComponent(filter)}` : "";
     setPage(0);
-    fetch(`/api/gallery${qs}`)
-      .then((r) => r.json<{ items: GalleryGroup[] }>())
-      .then((d) => setGallery(d.items));
+    fetchJsonWithRetry<{ items: GalleryGroup[] }>(`/api/gallery${qs}`)
+      .then((d) => setGallery(d.items))
+      .catch((err) => console.error("failed to load gallery", err));
   }, [filter]);
 
   const total = counters?.reduce((sum, c) => sum + c.total, 0) ?? 0;

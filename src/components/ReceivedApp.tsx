@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { fetchJsonWithRetry } from "../lib/fetchJson";
 
 interface InflowRow {
   tx_hash: string;
@@ -27,13 +28,15 @@ export default function ReceivedApp() {
 
   useEffect(() => {
     const load = () =>
-      fetch("/api/inflows")
-        .then((r) => r.json<{ recent: InflowRow[]; totals: Record<string, number>; valuation: { usd: number; ves: number } | null }>())
+      fetchJsonWithRetry<{ recent: InflowRow[]; totals: Record<string, number>; valuation: { usd: number; ves: number } | null }>(
+        "/api/inflows",
+      )
         .then((d) => {
           setRecent(d.recent);
           setTotals(d.totals);
           setValuation(d.valuation);
-        });
+        })
+        .catch((err) => console.error("failed to load inflows", err));
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
