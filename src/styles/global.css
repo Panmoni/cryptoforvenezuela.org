@@ -179,6 +179,13 @@ footer .build-hash {
   margin-top: 10px;
 }
 
+.funds-note {
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 10px;
+  max-width: 60ch;
+}
+
 .panmoni-link {
   font-weight: 700;
   letter-spacing: 0.03em;
