@@ -16,14 +16,13 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response("forbidden", { status: 403 });
   }
 
-  const contentType = request.headers.get("content-type") ?? "audio/mpeg";
   const audio = await request.blob();
   if (audio.size === 0) {
     return Response.json({ error: "empty body" }, { status: 400 });
   }
 
   try {
-    const result = await transcribeAndTranslate(env.AI, audio, contentType);
+    const result = await transcribeAndTranslate(env.AI, audio);
     return Response.json(result);
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : "transcription failed" }, { status: 502 });

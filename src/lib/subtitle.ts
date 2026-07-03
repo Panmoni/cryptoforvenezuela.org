@@ -42,9 +42,22 @@ function segmentsToSrt(segments: WhisperSegment[]): string {
     .join("\n");
 }
 
-export async function transcribeAndTranslate(ai: Ai, audio: Blob, contentType: string): Promise<SubtitleResult> {
+function toBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+export async function transcribeAndTranslate(ai: Ai, audio: Blob): Promise<SubtitleResult> {
+  // Docs confirm this model wants a base64 string, not the `{body,
+  // contentType}` object form (which 400s with an opaque "Invalid input").
+  const base64 = toBase64(await audio.arrayBuffer());
   const result = (await ai.run("@cf/openai/whisper-large-v3-turbo", {
-    audio: { body: audio, contentType },
+    audio: base64,
     task: "translate",
   })) as WhisperOutput;
 
