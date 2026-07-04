@@ -56,19 +56,17 @@ print("language detected:", d.get("language"))
 print("text:", d["text"][:300])
 PY
 
-# Size the caption relative to the actual frame, not a fixed pixel count —
-# a hardcoded FontSize looked fine on one clip and covered the screen on
-# another. Alignment=2 pins it bottom-center regardless of how libass would
-# otherwise auto-position a converted-from-SRT cue.
-HEIGHT="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$VIDEO")"
-FONTSIZE=$(( HEIGHT * 4 / 100 ))
-[ "$FONTSIZE" -lt 26 ] && FONTSIZE=26
-[ "$FONTSIZE" -gt 56 ] && FONTSIZE=56
-MARGINV=$(( HEIGHT * 7 / 100 ))
-
-echo "Burning subtitles into video (fontsize=$FONTSIZE, marginv=$MARGINV)..."
+# Fontsize/MarginV are NOT scaled by us to the video's real resolution —
+# ffmpeg's SRT-to-ASS conversion already renders against a fixed internal
+# reference height regardless of actual video size, so it auto-scales these
+# numbers up proportionally on its own. Scaling them again by our own
+# ffprobe'd height compounded into ~4x-oversized, screen-filling text
+# (confirmed by A/B testing identical force_style strings with and without
+# height-based scaling). Flat constants, verified visually at 720x1280,
+# are what actually renders as a normal bottom caption.
+echo "Burning subtitles into video..."
 ffmpeg -y -loglevel error -i "$VIDEO" \
-  -vf "subtitles=$SRT:force_style='FontName=DejaVu Sans,Fontsize=$FONTSIZE,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=$MARGINV'" \
+  -vf "subtitles=$SRT:force_style='FontName=DejaVu Sans,Fontsize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=40'" \
   -c:a copy "$SUBBED"
 
 echo "Done: $SUBBED"
