@@ -2,11 +2,14 @@
 # Fetch a live media file, get English subtitles from the Workers AI Whisper
 # tool endpoint, and burn them into a copy of the video.
 #
-# Usage: scripts/subtitle.sh <media-id> [output-dir]
+# Usage: scripts/subtitle.sh <media-id> [source-language] [output-dir]
+# source-language is a source-audio hint (e.g. "es") passed straight to
+# Whisper as `language` — omit it to let Whisper auto-detect.
 set -euo pipefail
 
-MEDIA_ID="${1:?usage: scripts/subtitle.sh <media-id> [output-dir]}"
-OUT_DIR="${2:-./subtitled}"
+MEDIA_ID="${1:?usage: scripts/subtitle.sh <media-id> [source-language] [output-dir]}"
+LANG_HINT="${2:-}"
+OUT_DIR="${3:-./.local/subtitled}"
 SITE_BASE="https://cryptoforvenezuela.org"
 
 cd "$(dirname "$0")/.."
@@ -31,7 +34,11 @@ echo "Extracting audio..."
 ffmpeg -y -loglevel error -i "$VIDEO" -vn -ac 1 -ar 16000 -q:a 4 "$AUDIO"
 
 echo "Transcribing + translating (Workers AI Whisper)..."
-curl -sf -X POST "$SITE_BASE/api/tools/subtitles" \
+SUB_URL="$SITE_BASE/api/tools/subtitles"
+if [ -n "$LANG_HINT" ]; then
+  SUB_URL="$SUB_URL?lang=$LANG_HINT"
+fi
+curl -sf -X POST "$SUB_URL" \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: audio/mpeg" \
   --data-binary "@$AUDIO" \

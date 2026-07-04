@@ -36,3 +36,7 @@ docs/
 # scratch drop-off for asset source files (e.g. favicon.io exports) —
 # the generated files get copied into public/, this dir doesn't need to be
 tmp/
+
+# local tool output (e.g. scripts/subtitle.sh downloads/renders) — working
+# files, not project content
+.local/

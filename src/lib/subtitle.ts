@@ -52,17 +52,19 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export async function transcribeAndTranslate(ai: Ai, audio: Blob): Promise<SubtitleResult> {
+export async function transcribeAndTranslate(ai: Ai, audio: Blob, sourceLanguage?: string): Promise<SubtitleResult> {
   // Docs confirm this model wants a base64 string, not the `{body,
   // contentType}` object form (which 400s with an opaque "Invalid input").
   const base64 = toBase64(await audio.arrayBuffer());
-  // Cloudflare's own example pairs task:"translate" with language:"en" —
-  // without it, translate is silently ignored and output stays in the
-  // source language (confirmed empirically against item #9's Spanish clip).
+  // `language` here is the SOURCE language hint, not the target — passing
+  // "en" for Spanish audio (a bad guess from Cloudflare's own doc example)
+  // corrupted the transcript instead of translating it. Leave it unset to
+  // auto-detect, or pass the real source language explicitly; either way
+  // task:"translate" is what makes the output English.
   const result = (await ai.run("@cf/openai/whisper-large-v3-turbo", {
     audio: base64,
     task: "translate",
-    language: "en",
+    ...(sourceLanguage ? { language: sourceLanguage } : {}),
   })) as WhisperOutput;
 
   return {
