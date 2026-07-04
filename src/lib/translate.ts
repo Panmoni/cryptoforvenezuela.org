@@ -7,6 +7,15 @@
 const GLOSSARY_TERMS: Array<{ pattern: RegExp; singular: string; plural: string }> = [
   // Venezuelan-Spanish disaster-relief testimony: "carpa(s)" always means tent(s).
   { pattern: /\bcarpas?\b/gi, singular: "tent", plural: "tents" },
+  // "pañalitis" (diaper rash, from "pañal" = diaper) is colloquial, not a
+  // formal medical term — m2m100 mistranslates it inconsistently ("paniculitis",
+  // "panalitis") or leaves it untranslated. Singular/plural intentionally
+  // identical: the word already ends in "s", which would otherwise trip the
+  // plural-detection heuristic below.
+  { pattern: /\bpañalitis\b/gi, singular: "diaper rash", plural: "diaper rash" },
+  // "talco" (talcum/baby powder) — plain word m2m100 has repeatedly left
+  // untranslated verbatim in this testimony's supply-request lists.
+  { pattern: /\btalcos?\b/gi, singular: "baby powder", plural: "baby powder" },
 ];
 
 function protectGlossaryTerms(text: string): { text: string; restore: (translated: string) => string } {

@@ -108,14 +108,22 @@ export async function transcribeAndTranslate(ai: Ai, audio: Blob, sourceLanguage
   })) as WhisperOutput;
 
   const detectedLanguage = result.transcription_info?.language ?? sourceLanguage ?? null;
-  const sourceCues = (result.segments ?? []).flatMap(splitIntoCues);
 
-  const englishCues = await Promise.all(
-    sourceCues.map(async (cue) => ({
-      ...cue,
-      text: (await translateToEnglish(ai, cue.text, detectedLanguage ?? undefined)) ?? cue.text,
+  // Translate whole Whisper segments (full sentences/paragraphs), THEN split
+  // into display cues — not the reverse. Splitting into ~70-char fragments
+  // before translation fed m2m100 isolated chunks with no sentence context,
+  // producing garbled output at chunk boundaries (verified against real
+  // testimony clips). It also split by Spanish character count while sizing
+  // for English on-screen width, which are not the same length. Translating
+  // per-segment gives the model full-sentence context and lets cue-splitting
+  // size itself off the actual displayed (English) text.
+  const translatedSegments = await Promise.all(
+    (result.segments ?? []).map(async (segment) => ({
+      ...segment,
+      text: (await translateToEnglish(ai, segment.text ?? "", detectedLanguage ?? undefined)) ?? segment.text ?? "",
     })),
   );
+  const englishCues = translatedSegments.flatMap(splitIntoCues);
 
   return {
     text: englishCues.map((cue) => cue.text).join(" "),

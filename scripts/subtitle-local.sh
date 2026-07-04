@@ -66,8 +66,12 @@ PY
 # height-based scaling). Flat constants, verified visually at 720x1280,
 # are what actually renders as a normal bottom caption.
 echo "Burning subtitles into video..."
+# -pix_fmt yuv420p forces standard 8-bit output. Without it, ffmpeg carries
+# over the source's 10-bit format (common on newer-iPhone HEVC footage) into
+# the re-encoded H.264 stream as profile "High 10" — a combination almost no
+# player or platform (X included) can decode, so the file just fails to open.
 ffmpeg -y -loglevel error -i "$VIDEO_IN" \
   -vf "subtitles=$SRT:force_style='FontName=DejaVu Sans,Fontsize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=40'" \
-  -c:a copy "$SUBBED"
+  -pix_fmt yuv420p -c:a copy "$SUBBED"
 
 echo "Done: $SUBBED"
