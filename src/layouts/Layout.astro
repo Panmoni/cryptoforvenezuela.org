@@ -27,7 +27,25 @@ const ogImageURL = new URL("/android-chrome-512x512.png", Astro.site);
 
 const locales = Object.keys(languages) as Lang[];
 const pathWithoutLocale = getPathWithoutLocale(Astro.url.pathname, locales);
-const OG_LOCALE: Record<Lang, string> = { en: "en_US", es: "es_419", fr: "fr_FR" };
+const OG_LOCALE: Record<Lang, string> = {
+  en: "en_US",
+  es: "es_419",
+  fr: "fr_FR",
+  de: "de_DE",
+  ar: "ar_AR",
+  ja: "ja_JP",
+  zh: "zh_CN",
+  it: "it_IT",
+  pt: "pt_PT",
+  nl: "nl_NL",
+  sv: "sv_SE",
+  ko: "ko_KR",
+  no: "nb_NO",
+  pl: "pl_PL",
+};
+// Only Arabic is RTL among the current locale set.
+const RTL_LOCALES: Lang[] = ["ar"];
+const dir = RTL_LOCALES.includes(lang) ? "rtl" : "ltr";
 
 const panmoniLinkHtml =
   '<img src="/panmoni.svg" alt="" class="panmoni-logo" aria-hidden="true" /><a href="https://panmoni.com/" target="_blank" rel="noopener noreferrer" title="Panmoni is a Web3 product studio" class="panmoni-link">Panmoni</a>';
@@ -138,7 +156,7 @@ const CHAINS = [
 ---
 
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} dir={dir}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
