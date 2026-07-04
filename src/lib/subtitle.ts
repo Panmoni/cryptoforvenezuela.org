@@ -31,14 +31,57 @@ function srtTimestamp(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(msRem, 3)}`;
 }
 
+interface Cue {
+  start: number;
+  end: number;
+  text: string;
+}
+
+const MAX_CUE_CHARS = 70;
+
+/** Whisper here returns coarse, pause-delimited segments — a single "segment"
+ * can be an entire multi-sentence paragraph spanning 20+ seconds. Burned in
+ * as one subtitle cue, that wraps into a wall of text covering most of the
+ * frame instead of a normal caption. Split each segment into short,
+ * proportionally-timed phrase cues so captions read like real subtitles —
+ * a few words at a time, advancing with the speech. */
+function splitIntoCues(segment: WhisperSegment): Cue[] {
+  const text = segment.text?.trim();
+  if (!text) return [];
+  const start = segment.start ?? 0;
+  const end = Math.max(segment.end ?? start + 2, start + 0.1);
+  const duration = end - start;
+
+  const words = text.split(/\s+/);
+  const chunks: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    const atClauseEnd = /[.,!?…]$/.test(word);
+    if (candidate.length >= MAX_CUE_CHARS || (atClauseEnd && candidate.length >= MAX_CUE_CHARS / 2)) {
+      chunks.push(candidate);
+      current = "";
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) chunks.push(current);
+
+  const totalChars = chunks.reduce((sum, c) => sum + c.length, 0) || 1;
+  let cursor = start;
+  return chunks.map((chunk) => {
+    const share = Math.max((chunk.length / totalChars) * duration, 1.2);
+    const cueStart = cursor;
+    const cueEnd = Math.min(end, cueStart + share);
+    cursor = cueEnd;
+    return { start: cueStart, end: cueEnd, text: chunk };
+  });
+}
+
 function segmentsToSrt(segments: WhisperSegment[]): string {
-  return segments
-    .filter((s) => s.text?.trim())
-    .map((s, i) => {
-      const start = srtTimestamp(s.start ?? 0);
-      const end = srtTimestamp(s.end ?? (s.start ?? 0) + 2);
-      return `${i + 1}\n${start} --> ${end}\n${s.text!.trim()}\n`;
-    })
+  const cues = segments.flatMap(splitIntoCues);
+  return cues
+    .map((cue, i) => `${i + 1}\n${srtTimestamp(cue.start)} --> ${srtTimestamp(cue.end)}\n${cue.text}\n`)
     .join("\n");
 }
 

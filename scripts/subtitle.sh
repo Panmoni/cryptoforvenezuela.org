@@ -56,9 +56,19 @@ print("language detected:", d.get("language"))
 print("text:", d["text"][:300])
 PY
 
-echo "Burning subtitles into video..."
+# Size the caption relative to the actual frame, not a fixed pixel count —
+# a hardcoded FontSize looked fine on one clip and covered the screen on
+# another. Alignment=2 pins it bottom-center regardless of how libass would
+# otherwise auto-position a converted-from-SRT cue.
+HEIGHT="$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$VIDEO")"
+FONTSIZE=$(( HEIGHT * 4 / 100 ))
+[ "$FONTSIZE" -lt 26 ] && FONTSIZE=26
+[ "$FONTSIZE" -gt 56 ] && FONTSIZE=56
+MARGINV=$(( HEIGHT * 7 / 100 ))
+
+echo "Burning subtitles into video (fontsize=$FONTSIZE, marginv=$MARGINV)..."
 ffmpeg -y -loglevel error -i "$VIDEO" \
-  -vf "subtitles=$SRT:force_style='FontName=DejaVu Sans,FontSize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,MarginV=40'" \
+  -vf "subtitles=$SRT:force_style='FontName=DejaVu Sans,Fontsize=$FONTSIZE,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=$MARGINV'" \
   -c:a copy "$SUBBED"
 
 echo "Done: $SUBBED"
