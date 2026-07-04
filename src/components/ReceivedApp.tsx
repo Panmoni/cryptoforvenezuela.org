@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchJsonWithRetry } from "../lib/fetchJson";
+import { useTranslations } from "../i18n/utils";
+import type { Lang } from "../i18n/ui";
 
 interface InflowRow {
   tx_hash: string;
@@ -20,7 +22,8 @@ const EXPLORERS: Record<InflowRow["chain"], (tx: string) => string> = {
 
 const PAGE_SIZE = 10;
 
-export default function ReceivedApp() {
+export default function ReceivedApp({ lang }: { lang: Lang }) {
+  const t = useTranslations(lang);
   const [recent, setRecent] = useState<InflowRow[] | null>(null);
   const [totals, setTotals] = useState<Record<string, number> | null>(null);
   const [valuation, setValuation] = useState<{ usd: number; ves: number } | null>(null);
@@ -45,7 +48,7 @@ export default function ReceivedApp() {
   return (
     <div>
       <section className="section">
-        <h2>Totals received</h2>
+        <h2>{t("received.totalsHeading")}</h2>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {totals &&
             Object.entries(totals).map(([key, total]) => (
@@ -55,7 +58,7 @@ export default function ReceivedApp() {
               </div>
             ))}
           {totals && Object.keys(totals).length === 0 && (
-            <p style={{ color: "var(--text-dim)" }}>Nothing confirmed on-chain yet.</p>
+            <p style={{ color: "var(--text-dim)" }}>{t("received.nothingConfirmed")}</p>
           )}
         </div>
         {valuation && (
@@ -67,11 +70,11 @@ export default function ReceivedApp() {
       </section>
 
       <section className="section">
-        <h2>Recent transfers</h2>
+        <h2>{t("received.recentHeading")}</h2>
         {recent?.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE).map((row) => (
           <div key={row.tx_hash} className="card" style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>
-              {row.amount} {row.token} on {row.chain}
+              {row.amount} {row.token} {t("received.on")} {row.chain}
             </span>
             <span style={{ display: "flex", gap: 16, alignItems: "center" }}>
               <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
@@ -81,7 +84,7 @@ export default function ReceivedApp() {
                 })}
               </span>
               <a href={EXPLORERS[row.chain](row.tx_hash)} target="_blank" rel="noreferrer">
-                view tx
+                {t("received.viewTx")}
               </a>
             </span>
           </div>
@@ -89,10 +92,10 @@ export default function ReceivedApp() {
         {recent && recent.length > PAGE_SIZE && (
           <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "center", marginTop: 12 }}>
             <button type="button" className="button secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-              Previous
+              {t("common.previous")}
             </button>
             <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
-              Page {page + 1} of {Math.ceil(recent.length / PAGE_SIZE)}
+              {t("common.page")} {page + 1} {t("common.of")} {Math.ceil(recent.length / PAGE_SIZE)}
             </span>
             <button
               type="button"
@@ -100,7 +103,7 @@ export default function ReceivedApp() {
               disabled={page >= Math.ceil(recent.length / PAGE_SIZE) - 1}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         )}

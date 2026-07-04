@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import QRCode from "qrcode";
 import { PublicKey } from "@solana/web3.js";
 import { ADDRESS_ALERT, CANONICAL_ANCHOR_URL, RECIPIENT_ADDRESSES, type ChainKey } from "../config/addresses";
+import { useTranslations } from "../i18n/utils";
+import type { Lang } from "../i18n/ui";
 
 const SUGGESTED_USD = [5, 20, 50];
 
@@ -145,7 +147,8 @@ function ChainIcon({ chain }: { chain: ChainKey }) {
   return CHAIN_ICONS[chain];
 }
 
-export default function DonationWidget() {
+export default function DonationWidget({ lang }: { lang: Lang }) {
+  const t = useTranslations(lang);
   const [chain, setChain] = useState<ChainKey>("solana");
   const [sendingToken, setSendingToken] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -212,15 +215,16 @@ export default function DonationWidget() {
             onClick={() => setSendingToken(true)}
             aria-pressed={sendingToken}
           >
-            Token
+            {t("donation.token")}
           </button>
         </div>
       )}
 
       {alerted ? (
         <div className="alert-banner" role="alert">
-          This {target.chainLabel} address has been flagged and is temporarily suspended. Do not send funds to
-          it. Check {CANONICAL_ANCHOR_URL} for the latest verified address.
+          {t("donation.alertBanner")
+            .replace("{{chain}}", target.chainLabel)
+            .replace("{{url}}", CANONICAL_ANCHOR_URL)}
         </div>
       ) : (
         <>
@@ -237,13 +241,13 @@ export default function DonationWidget() {
                   margin: "0 0 6px",
                 }}
               >
-                Send here — {sendingToken ? "SOL or any SPL token" : "any amount"}
+                {sendingToken ? t("donation.sendHereToken") : t("donation.sendHereAny")}
               </p>
               <p className="mono" style={{ wordBreak: "break-all", fontSize: 15 }}>
                 {target.address}
               </p>
               <button type="button" className="button" onClick={copyAddress}>
-                {copied ? "Copied" : "Copy address"}
+                {copied ? t("donation.copied") : t("donation.copyAddress")}
               </button>
 
               {chain === "solana" && sendingToken && (
@@ -266,13 +270,9 @@ export default function DonationWidget() {
                       margin: "0 0 6px",
                     }}
                   >
-                    Verify only — not a send address
+                    {t("donation.verifyOnlyNotSend")}
                   </p>
-                  <p style={{ fontSize: 13, color: "var(--text-dim)" }}>
-                    Your wallet resolves the token account for you — always send to the address above, for
-                    SOL and every SPL token alike. This is where USDC specifically ends up on-chain, shown so
-                    you can independently confirm it after sending:
-                  </p>
+                  <p style={{ fontSize: 13, color: "var(--text-dim)" }}>{t("donation.verifyTokenBody")}</p>
                   <p className="mono" style={{ fontSize: 13, color: "var(--text-dim)", wordBreak: "break-all", marginTop: 8 }}>
                     {usdcTokenAccount}
                   </p>
@@ -280,14 +280,16 @@ export default function DonationWidget() {
               )}
 
               <div style={{ marginTop: 16 }}>
-                <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "0 0 8px" }}>Suggested amounts:</p>
+                <p style={{ fontSize: 14, color: "var(--text-dim)", margin: "0 0 8px" }}>
+                  {t("donation.suggestedAmounts")}
+                </p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {SUGGESTED_USD.map((amt) => (
                     <span key={amt} className="mono" style={{ fontSize: 14, color: "var(--text-dim)" }}>
                       ${amt}
                     </span>
                   ))}
-                  <span style={{ fontSize: 14, color: "var(--text-dim)" }}>or any amount</span>
+                  <span style={{ fontSize: 14, color: "var(--text-dim)" }}>{t("donation.orAnyAmount")}</span>
                 </div>
               </div>
             </div>
@@ -300,23 +302,23 @@ export default function DonationWidget() {
             onClick={() => setVerifyOpen((v) => !v)}
             aria-expanded={verifyOpen}
           >
-            {verifyOpen ? "Hide verification" : "Verify this address"}
+            {verifyOpen ? t("donation.hideVerification") : t("donation.verifyThisAddress")}
           </button>
 
           {verifyOpen && (
             <div style={{ marginTop: 12, fontSize: 14, color: "var(--text-dim)" }}>
               <p>
-                Check value: <span className="mono">{target.shortHash}</span>
+                {t("donation.checkValue")} <span className="mono">{target.shortHash}</span>
               </p>
               <p>
-                This address was published once, from an established channel, and hasn't changed since:{" "}
+                {t("donation.canonicalNote")}{" "}
                 <a href={CANONICAL_ANCHOR_URL} target="_blank" rel="noreferrer">
-                  canonical source
+                  {t("donation.canonicalSource")}
                 </a>
               </p>
               <p>
                 <a href={target.explorerUrl(target.address)} target="_blank" rel="noreferrer">
-                  View on block explorer
+                  {t("donation.viewOnExplorer")}
                 </a>
               </p>
             </div>

@@ -1,5 +1,25 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { fetchJsonWithRetry } from "../lib/fetchJson";
+import { useTranslations } from "../i18n/utils";
+import { type Lang, type UiKey } from "../i18n/ui";
+
+const CATEGORY_KEYS: Record<string, UiKey> = {
+  food: "categories.food",
+  hygiene: "categories.hygiene",
+  hospital: "categories.hospital",
+  water: "categories.water",
+  shelter: "categories.shelter",
+  other: "categories.other",
+};
+
+/** Category values come from a fixed enum (`src/lib/schema.ts` `CATEGORIES`)
+ * so they're safe to translate via a lookup; item names and sender captions
+ * are free-text donor/admin data with no fixed vocabulary and are shown
+ * as-is, in whatever language they were entered. */
+function categoryLabel(t: (key: UiKey) => string, category: string): string {
+  const key = CATEGORY_KEYS[category];
+  return key ? t(key) : category;
+}
 
 interface CounterRow {
   category: string;
@@ -50,7 +70,15 @@ function captionText(
  * card opens the lightbox, the lightbox itself closes on click) which makes
  * selecting caption text to copy unreliable. A dedicated copy button sidesteps
  * that entirely. */
-function CopyButton({ text, style }: { text: string; style?: CSSProperties }) {
+function CopyButton({
+  text,
+  style,
+  t,
+}: {
+  text: string;
+  style?: CSSProperties;
+  t: (key: UiKey) => string;
+}) {
   const [copied, setCopied] = useState(false);
 
   if (!text.trim()) return null;
@@ -58,8 +86,8 @@ function CopyButton({ text, style }: { text: string; style?: CSSProperties }) {
   return (
     <button
       type="button"
-      title={copied ? "Copied!" : "Copy text"}
-      aria-label={copied ? "Copied!" : "Copy text"}
+      title={copied ? t("impact.copied") : t("impact.copyText")}
+      aria-label={copied ? t("impact.copied") : t("impact.copyText")}
       onClick={(e) => {
         e.stopPropagation();
         navigator.clipboard.writeText(text).then(() => {
@@ -96,7 +124,8 @@ function CopyButton({ text, style }: { text: string; style?: CSSProperties }) {
   );
 }
 
-export default function ImpactApp() {
+export default function ImpactApp({ lang }: { lang: Lang }) {
+  const t = useTranslations(lang);
   const [counters, setCounters] = useState<CounterRow[] | null>(null);
   const [gallery, setGallery] = useState<GalleryGroup[] | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
@@ -135,7 +164,9 @@ export default function ImpactApp() {
   return (
     <div>
       <section className="section">
-        <h2>{counters === null ? "…" : total.toLocaleString()} items delivered, photo-verified</h2>
+        <h2>
+          {counters === null ? "…" : total.toLocaleString()} {t("impact.itemsDelivered")}
+        </h2>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 16 }}>
           {categoryTotals &&
             Object.entries(categoryTotals).map(([category, catTotal]) => (
@@ -154,17 +185,17 @@ export default function ImpactApp() {
                 }}
               >
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{catTotal.toLocaleString()}</div>
-                <div style={{ color: "var(--text-dim)" }}>{category}</div>
+                <div style={{ color: "var(--text-dim)" }}>{categoryLabel(t, category)}</div>
               </button>
             ))}
           {counters?.length === 0 && (
-            <p style={{ color: "var(--text-dim)" }}>Nothing approved yet — check back soon.</p>
+            <p style={{ color: "var(--text-dim)" }}>{t("impact.nothingApproved")}</p>
           )}
         </div>
         {counters && counters.length > 0 && (
           <details style={{ marginTop: 16 }}>
             <summary style={{ cursor: "pointer", color: "var(--text-dim)", fontSize: 14 }}>
-              Full itemized breakdown ({counters.length} items)
+              {t("impact.fullBreakdown")} ({counters.length} {t("impact.items")})
             </summary>
             <div
               style={{
@@ -179,7 +210,7 @@ export default function ImpactApp() {
               {counters.map((c) => (
                 <div key={`${c.category}-${c.item_name}`} style={{ color: "var(--text-dim)" }}>
                   <strong style={{ color: "var(--text)" }}>{c.total.toLocaleString()}</strong> {c.item_name}{" "}
-                  <span style={{ opacity: 0.6 }}>({c.category})</span>
+                  <span style={{ opacity: 0.6 }}>({categoryLabel(t, c.category)})</span>
                 </div>
               ))}
             </div>
@@ -188,13 +219,16 @@ export default function ImpactApp() {
       </section>
 
       <section className="section" id="gallery">
-        <h2>Evidence {filter ? `— ${filter}` : ""}</h2>
+        <h2>
+          {t("impact.evidence")} {filter ? `— ${categoryLabel(t, filter)}` : ""}
+        </h2>
         <p style={{ fontSize: 13, color: "var(--text-dim)", marginTop: -8, marginBottom: 16 }}>
-          Follow programmatically: <a href="/feed.xml">RSS</a> · <a href="/feed.json">JSON Feed</a>
+          {t("impact.followProgrammatically")} <a href="/feed.xml">{t("footer.rss")}</a> ·{" "}
+          <a href="/feed.json">{t("footer.jsonFeed")}</a>
         </p>
         {filter && (
           <button type="button" className="button secondary" onClick={() => setFilter(null)} style={{ marginBottom: 16 }}>
-            Clear filter
+            {t("impact.clearFilter")}
           </button>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
@@ -207,7 +241,7 @@ export default function ImpactApp() {
                 className={group.photos.length > 1 ? "card" : undefined}
                 role="button"
                 tabIndex={0}
-                aria-label="View full size"
+                aria-label={t("impact.viewFullSize")}
                 onClick={() => setLightbox(group)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -219,6 +253,7 @@ export default function ImpactApp() {
               >
                 <CopyButton
                   text={captionText(group.senderCaption, group.senderCaptionEn, group.items)}
+                  t={t}
                   style={{
                     position: "absolute",
                     top: group.photos.length > 1 ? 20 : 8,
@@ -295,15 +330,19 @@ export default function ImpactApp() {
                   }}
                 >
                   {group.photos.length > 1 && (
-                    <strong style={{ color: "var(--text-dim)" }}>{group.photos.length} photos — same delivery. </strong>
+                    <strong style={{ color: "var(--text-dim)" }}>
+                      {group.photos.length} {t("impact.sameDelivery")}{" "}
+                    </strong>
                   )}
                   {group.senderCaption && <em>"{group.senderCaption}" — </em>}
                   {translationDiffers(group.senderCaption, group.senderCaptionEn) && (
-                    <span style={{ color: "var(--text-dim)" }}>(EN: "{group.senderCaptionEn}") — </span>
+                    <span style={{ color: "var(--text-dim)" }}>
+                      ({t("impact.english")} "{group.senderCaptionEn}") —{" "}
+                    </span>
                   )}
                   {group.items.length > 0
                     ? group.items.map((i) => `${i.count} ${i.name}`).join(", ")
-                    : !group.senderCaption && "General evidence"}
+                    : !group.senderCaption && t("impact.generalEvidence")}
                 </figcaption>
               </figure>
             );
@@ -312,10 +351,10 @@ export default function ImpactApp() {
         {gallery && gallery.length > PAGE_SIZE && (
           <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "center", marginTop: 16 }}>
             <button type="button" className="button secondary" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
-              Previous
+              {t("common.previous")}
             </button>
             <span style={{ color: "var(--text-dim)", fontSize: 13 }}>
-              Page {page + 1} of {Math.ceil(gallery.length / PAGE_SIZE)}
+              {t("common.page")} {page + 1} {t("common.of")} {Math.ceil(gallery.length / PAGE_SIZE)}
             </span>
             <button
               type="button"
@@ -323,11 +362,11 @@ export default function ImpactApp() {
               disabled={page >= Math.ceil(gallery.length / PAGE_SIZE) - 1}
               onClick={() => setPage((p) => p + 1)}
             >
-              Next
+              {t("common.next")}
             </button>
           </div>
         )}
-        {gallery?.length === 0 && <p style={{ color: "var(--text-dim)" }}>No photos in this category yet.</p>}
+        {gallery?.length === 0 && <p style={{ color: "var(--text-dim)" }}>{t("impact.noPhotosCategory")}</p>}
       </section>
 
       {lightbox && (
@@ -407,7 +446,8 @@ export default function ImpactApp() {
                 cursor: "text",
               }}
             >
-              "{lightbox.senderCaption}" <CopyButton text={lightbox.senderCaption} style={{ verticalAlign: "middle" }} />
+              "{lightbox.senderCaption}"{" "}
+              <CopyButton text={lightbox.senderCaption} t={t} style={{ verticalAlign: "middle" }} />
             </p>
           )}
           {translationDiffers(lightbox.senderCaption, lightbox.senderCaptionEn) && (
@@ -422,8 +462,8 @@ export default function ImpactApp() {
                 cursor: "text",
               }}
             >
-              English: "{lightbox.senderCaptionEn}"{" "}
-              <CopyButton text={lightbox.senderCaptionEn ?? ""} style={{ verticalAlign: "middle" }} />
+              {t("impact.english")} "{lightbox.senderCaptionEn}"{" "}
+              <CopyButton text={lightbox.senderCaptionEn ?? ""} t={t} style={{ verticalAlign: "middle" }} />
             </p>
           )}
           {lightbox.items.length > 0 && (
@@ -437,7 +477,7 @@ export default function ImpactApp() {
             onClick={() => setLightbox(null)}
             style={{ marginTop: 8 }}
           >
-            Close
+            {t("common.close")}
           </button>
         </div>
       )}

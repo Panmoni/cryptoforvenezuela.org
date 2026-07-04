@@ -1,0 +1,30 @@
+---
+import { languages, type Lang } from "../i18n/ui";
+import { getPathWithoutLocale } from "../i18n/utils";
+
+const currentLocale = (Astro.currentLocale ?? "en") as Lang;
+const locales = Object.keys(languages) as Lang[];
+const pathWithoutLocale = getPathWithoutLocale(Astro.url.pathname, locales);
+---
+
+<div class="lang-switch">
+  <select id="lang-select" aria-label="Language" data-path={pathWithoutLocale}>
+    {
+      locales.map((code) => (
+        <option value={code} selected={code === currentLocale}>
+          {languages[code]}
+        </option>
+      ))
+    }
+  </select>
+</div>
+
+<script>
+  const select = document.getElementById("lang-select") as HTMLSelectElement | null;
+  select?.addEventListener("change", () => {
+    const locale = select.value;
+    const base = select.dataset.path ?? "/";
+    const prefix = locale === "en" ? "" : `/${locale}`;
+    location.href = `${prefix}${base}${location.hash}`;
+  });
+</script>

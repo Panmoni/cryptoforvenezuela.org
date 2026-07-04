@@ -1,5 +1,9 @@
 ---
+import { getAbsoluteLocaleUrl } from "astro:i18n";
 import "../styles/global.css";
+import { defaultLang, languages, type Lang } from "../i18n/ui";
+import { useTranslations, getPathWithoutLocale } from "../i18n/utils";
+import LanguageSwitcher from "../components/LanguageSwitcher.astro";
 
 interface Props {
   title: string;
@@ -13,9 +17,21 @@ const {
   noindex = false,
 } = Astro.props;
 
+const lang = (Astro.currentLocale ?? defaultLang) as Lang;
+const t = useTranslations(lang);
+const homeHref = lang === defaultLang ? "/" : `/${lang}/`;
+
 const pageTitle = `${title} · Crypto for Venezuela`;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const ogImageURL = new URL("/android-chrome-512x512.png", Astro.site);
+
+const locales = Object.keys(languages) as Lang[];
+const pathWithoutLocale = getPathWithoutLocale(Astro.url.pathname, locales);
+const OG_LOCALE: Record<Lang, string> = { en: "en_US", es: "es_419", fr: "fr_FR" };
+
+const panmoniLinkHtml =
+  '<img src="/panmoni.svg" alt="" class="panmoni-logo" aria-hidden="true" /><a href="https://panmoni.com/" target="_blank" rel="noopener noreferrer" title="Panmoni is a Web3 product studio" class="panmoni-link">Panmoni</a>';
+const panmoniCreditHtml = t("footer.panmoniCredit").replace("{{link}}", panmoniLinkHtml);
 
 // Single-color marks use currentColor so they follow the muted/hover text
 // color; Solana and Ethereum keep their brand colors, matching the chain
@@ -122,7 +138,7 @@ const CHAINS = [
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -130,6 +146,13 @@ const CHAINS = [
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    {
+      locales.map((code) => (
+        <link rel="alternate" hreflang={code} href={getAbsoluteLocaleUrl(code, pathWithoutLocale)} />
+      ))
+    }
+    <link rel="alternate" hreflang="x-default" href={getAbsoluteLocaleUrl(defaultLang, pathWithoutLocale)} />
 
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -147,6 +170,7 @@ const CHAINS = [
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content={ogImageURL} />
+    <meta property="og:locale" content={OG_LOCALE[lang]} />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={pageTitle} />
@@ -156,48 +180,38 @@ const CHAINS = [
   <body>
     <main>
       <nav class="nav">
-        <a href="/" class="brand">Crypto for Venezuela</a>
+        <a href={homeHref} class="brand">Crypto for Venezuela</a>
         <div class="nav-links">
-          <a href="/#donate">Donate</a>
-          <a href="/#impact">Impact</a>
-          <a href="/#received">Received</a>
-          <a href="/#about">About</a>
+          <a href={`${homeHref}#donate`}>{t("nav.donate")}</a>
+          <a href={`${homeHref}#impact`}>{t("nav.impact")}</a>
+          <a href={`${homeHref}#received`}>{t("nav.received")}</a>
+          <a href={`${homeHref}#about`}>{t("nav.about")}</a>
         </div>
+        <LanguageSwitcher />
       </nav>
       <slot />
       <footer>
         <p>
           <a href="https://github.com/Panmoni/cryptoforvenezuela.org" target="_blank" rel="noopener noreferrer">
-            Source on GitHub
+            {t("footer.sourceGithub")}
           </a>
-          · <a href="https://x.com/crypto4ve" target="_blank" rel="noopener noreferrer">Follow on X</a>
+          · <a href="https://x.com/crypto4ve" target="_blank" rel="noopener noreferrer">{t("footer.followX")}</a>
           · <a href="mailto:hello@panmoni.com">hello@panmoni.com</a>
-          · <a href="/feed.xml">RSS</a>
-          · <a href="/feed.json">JSON Feed</a>
+          · <a href="/feed.xml">{t("footer.rss")}</a>
+          · <a href="/feed.json">{t("footer.jsonFeed")}</a>
         </p>
-        <p class="panmoni-credit">
-          A <img src="/panmoni.svg" alt="" class="panmoni-logo" aria-hidden="true" /><a
-            href="https://panmoni.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Panmoni is a Web3 product studio"
-            class="panmoni-link">Panmoni</a
-          > project.
-        </p>
-        <p class="funds-note">
-          100% of donations go straight to disaster relief. The domains, development work, and even the
-          microphones used to gather stories from the ground are donated by Panmoni.
-        </p>
+        <p class="panmoni-credit" set:html={panmoniCreditHtml} />
+        <p class="funds-note">{t("footer.fundsNote")}</p>
         <div class="tech-stack">
           {
-            TECH_STACK.map((t) => (
-              <a href={t.href} target="_blank" rel="noopener noreferrer" title={t.name} class="tech-stack-item">
-                {t.img ? (
-                  <img src={t.img} alt="" width="14" height="14" aria-hidden="true" />
+            TECH_STACK.map((tech) => (
+              <a href={tech.href} target="_blank" rel="noopener noreferrer" title={tech.name} class="tech-stack-item">
+                {tech.img ? (
+                  <img src={tech.img} alt="" width="14" height="14" aria-hidden="true" />
                 ) : (
-                  <svg viewBox={t.viewBox} width="14" height="14" aria-hidden="true" set:html={t.svg} />
+                  <svg viewBox={tech.viewBox} width="14" height="14" aria-hidden="true" set:html={tech.svg} />
                 )}
-                <span>{t.name}</span>
+                <span>{tech.name}</span>
               </a>
             ))
           }

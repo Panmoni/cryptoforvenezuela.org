@@ -1,0 +1,89 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DonationWidget from "./DonationWidget";
+import ImpactApp from "./ImpactApp";
+import ReceivedApp from "./ReceivedApp";
+import { useTranslations } from "../i18n/utils";
+import type { Lang } from "../i18n/ui";
+// ConnectSend (Phase 6, wallet-connect-and-send) is built but not wired in
+// for iteration 1 — it needs a Reown project ID we don't have yet. The
+// component still lives in src/components/ConnectSend.tsx; re-add the
+// import and the <ConnectSend client:only="react" /> line below once one
+// exists. The address+QR widget below is the full donation path for now.
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+
+const sponsorsBody = t("sponsors.body")
+  .replace(
+    "{{email}}",
+    '<a href="mailto:hello@panmoni.com">hello@panmoni.com</a>',
+  )
+  .replace(
+    "{{telegram}}",
+    '<a href="https://t.me/georgedonnelly" target="_blank" rel="noopener noreferrer">@georgedonnelly</a>',
+  );
+---
+
+<Layout title={t("meta.title")} description={t("meta.description")}>
+  <section id="donate" class="hero">
+    <h1>{t("hero.title")}</h1>
+    <p>{t("hero.body")}</p>
+  </section>
+
+  <!-- client:only — DonationWidget pulls in the `qrcode` package (Node-only
+       code paths in its non-browser entry), which breaks Astro's
+       SSR/prerender pass if hydrated normally. -->
+  <DonationWidget client:only="react" lang={lang} />
+
+  <section id="impact" class="section">
+    <h2>{t("impact.heading")}</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;">{t("impact.subtext")}</p>
+  </section>
+  <ImpactApp client:load lang={lang} />
+
+  <section id="received" class="section">
+    <h2>{t("received.heading")}</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;">{t("received.subtext")}</p>
+  </section>
+  <ReceivedApp client:load lang={lang} />
+
+  <section id="sponsors" class="section">
+    <h2>{t("sponsors.heading")}</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;" set:html={sponsorsBody} />
+  </section>
+
+  <div id="about">
+    <section class="section">
+      <h2>{t("about.heading")}</h2>
+    </section>
+
+    <section class="section">
+      <h3>{t("about.walletTitle")}</h3>
+      <p>{t("about.walletBody")}</p>
+    </section>
+
+    <section class="section">
+      <h3>{t("about.notTitle")}</h3>
+      <ul style="color: var(--text-dim)">
+        <li>{t("about.not1")}</li>
+        <li>{t("about.not2")}</li>
+        <li>{t("about.not3")}</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h3>{t("about.verifyTitle")}</h3>
+      <p>{t("about.verifyBody")}</p>
+    </section>
+
+    <section class="section">
+      <h3>{t("about.trackingTitle")}</h3>
+      <p>{t("about.trackingBody")}</p>
+    </section>
+  </div>
+</Layout>

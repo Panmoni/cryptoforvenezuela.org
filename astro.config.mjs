@@ -22,6 +22,13 @@ export default defineConfig({
   // `export const prerender = true` individually since they don't need
   // per-request server logic (their data comes from client-side islands).
   output: 'server',
+  i18n: {
+    defaultLocale: 'en',
+    locales: ['en', 'es', 'fr'],
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
   vite: {
     define: {
       __BUILD_HASH__: JSON.stringify(buildHash),
