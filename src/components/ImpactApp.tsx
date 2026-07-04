@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { fetchJsonWithRetry } from "../lib/fetchJson";
 
 interface CounterRow {
@@ -31,6 +31,70 @@ function translationDiffers(original: string | null, translated: string | null):
 }
 
 const PAGE_SIZE = 10;
+
+/** The text that would actually go in a tweet — same content as the caption
+ * display, just flattened to plain text so there's something to copy. */
+function captionText(
+  senderCaption: string | null,
+  senderCaptionEn: string | null,
+  items: { name: string; count: number }[],
+): string {
+  const parts: string[] = [];
+  if (senderCaption) parts.push(senderCaption);
+  if (translationDiffers(senderCaption, senderCaptionEn)) parts.push(`(EN: ${senderCaptionEn})`);
+  if (items.length > 0) parts.push(items.map((i) => `${i.count} ${i.name}`).join(", "));
+  return parts.join(" — ");
+}
+
+/** Captions sit inside elements with their own click handling (the gallery
+ * card opens the lightbox, the lightbox itself closes on click) which makes
+ * selecting caption text to copy unreliable. A dedicated copy button sidesteps
+ * that entirely. */
+function CopyButton({ text, style }: { text: string; style?: CSSProperties }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!text.trim()) return null;
+
+  return (
+    <button
+      type="button"
+      title={copied ? "Copied!" : "Copy text"}
+      aria-label={copied ? "Copied!" : "Copy text"}
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 22,
+        height: 22,
+        padding: 0,
+        border: "none",
+        background: "transparent",
+        color: copied ? "var(--accent)" : "var(--text-dim)",
+        cursor: "pointer",
+        flexShrink: 0,
+        ...style,
+      }}
+    >
+      {copied ? (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 export default function ImpactApp() {
   const [counters, setCounters] = useState<CounterRow[] | null>(null);
@@ -151,8 +215,20 @@ export default function ImpactApp() {
                     setLightbox(group);
                   }
                 }}
-                style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0, cursor: "zoom-in" }}
+                style={{ margin: 0, padding: group.photos.length > 1 ? 12 : 0, cursor: "zoom-in", position: "relative" }}
               >
+                <CopyButton
+                  text={captionText(group.senderCaption, group.senderCaptionEn, group.items)}
+                  style={{
+                    position: "absolute",
+                    top: group.photos.length > 1 ? 20 : 8,
+                    right: group.photos.length > 1 ? 20 : 8,
+                    zIndex: 1,
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff",
+                    borderRadius: 6,
+                  }}
+                />
                 <div
                   style={{
                     display: "grid",
@@ -320,6 +396,7 @@ export default function ImpactApp() {
           </div>
           {lightbox.senderCaption && (
             <p
+              onClick={(e) => e.stopPropagation()}
               style={{
                 color: "var(--text)",
                 marginTop: 16,
@@ -327,22 +404,26 @@ export default function ImpactApp() {
                 fontStyle: "italic",
                 textAlign: "center",
                 maxWidth: "80ch",
+                cursor: "text",
               }}
             >
-              "{lightbox.senderCaption}"
+              "{lightbox.senderCaption}" <CopyButton text={lightbox.senderCaption} style={{ verticalAlign: "middle" }} />
             </p>
           )}
           {translationDiffers(lightbox.senderCaption, lightbox.senderCaptionEn) && (
             <p
+              onClick={(e) => e.stopPropagation()}
               style={{
                 color: "var(--text-dim)",
                 marginTop: 4,
                 fontSize: 15,
                 textAlign: "center",
                 maxWidth: "80ch",
+                cursor: "text",
               }}
             >
-              English: "{lightbox.senderCaptionEn}"
+              English: "{lightbox.senderCaptionEn}"{" "}
+              <CopyButton text={lightbox.senderCaptionEn ?? ""} style={{ verticalAlign: "middle" }} />
             </p>
           )}
           {lightbox.items.length > 0 && (
