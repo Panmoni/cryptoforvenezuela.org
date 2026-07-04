@@ -1,8 +1,11 @@
-/** English subtitles via Workers AI Whisper — same free/cheap in-stack model
- * family as translateToEnglish, just the speech model instead of the text
- * one. `task: "translate"` gets Whisper to output English directly from
- * Spanish (or any source language) audio in one call, with per-segment
- * timestamps we turn into an .srt. */
+import { translateToEnglish } from "./translate";
+
+/** English subtitles via Workers AI — Whisper for accurate transcription
+ * with timestamps, m2m100 for translation (the same model this repo already
+ * uses for caption translation). Whisper's own `task: "translate"` is
+ * documented to do this in one call, but it's a no-op in practice here —
+ * verified across several source-language hints, output always stayed in
+ * the source language — so translation is a separate, proven step instead. */
 export interface SubtitleResult {
   text: string;
   srt: string;
@@ -16,7 +19,6 @@ interface WhisperSegment {
 }
 
 interface WhisperOutput {
-  text: string;
   segments?: WhisperSegment[];
   transcription_info?: { language?: string };
 }
@@ -78,10 +80,10 @@ function splitIntoCues(segment: WhisperSegment): Cue[] {
   });
 }
 
-function segmentsToSrt(segments: WhisperSegment[]): string {
-  const cues = segments.flatMap(splitIntoCues);
+function cuesToSrt(cues: Cue[]): string {
   return cues
-    .map((cue, i) => `${i + 1}\n${srtTimestamp(cue.start)} --> ${srtTimestamp(cue.end)}\n${cue.text}\n`)
+    .filter((cue) => cue.text.trim())
+    .map((cue, i) => `${i + 1}\n${srtTimestamp(cue.start)} --> ${srtTimestamp(cue.end)}\n${cue.text.trim()}\n`)
     .join("\n");
 }
 
@@ -99,20 +101,25 @@ export async function transcribeAndTranslate(ai: Ai, audio: Blob, sourceLanguage
   // Docs confirm this model wants a base64 string, not the `{body,
   // contentType}` object form (which 400s with an opaque "Invalid input").
   const base64 = toBase64(await audio.arrayBuffer());
-  // `language` here is the SOURCE language hint, not the target — passing
-  // "en" for Spanish audio (a bad guess from Cloudflare's own doc example)
-  // corrupted the transcript instead of translating it. Leave it unset to
-  // auto-detect, or pass the real source language explicitly; either way
-  // task:"translate" is what makes the output English.
   const result = (await ai.run("@cf/openai/whisper-large-v3-turbo", {
     audio: base64,
-    task: "translate",
+    task: "transcribe",
     ...(sourceLanguage ? { language: sourceLanguage } : {}),
   })) as WhisperOutput;
 
+  const detectedLanguage = result.transcription_info?.language ?? sourceLanguage ?? null;
+  const sourceCues = (result.segments ?? []).flatMap(splitIntoCues);
+
+  const englishCues = await Promise.all(
+    sourceCues.map(async (cue) => ({
+      ...cue,
+      text: (await translateToEnglish(ai, cue.text, detectedLanguage ?? undefined)) ?? cue.text,
+    })),
+  );
+
   return {
-    text: result.text ?? "",
-    srt: segmentsToSrt(result.segments ?? []),
-    language: result.transcription_info?.language ?? null,
+    text: englishCues.map((cue) => cue.text).join(" "),
+    srt: cuesToSrt(englishCues),
+    language: detectedLanguage,
   };
 }
