@@ -1,0 +1,90 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DonationWidget from "./DonationWidget";
+import GoalTracker from "./GoalTracker";
+import { GOAL_COPY, type GoalLang } from "../config/goals";
+
+interface Props {
+  lang: GoalLang;
+}
+
+const { lang } = Astro.props;
+const c = GOAL_COPY[lang];
+---
+
+<Layout title={c.metaTitle} description={c.metaDescription} noindex={true}>
+  <section class="hero">
+    <p class="preview-pill">{c.previewNote}</p>
+    <h1>{c.heroTitle}</h1>
+    <p>{c.heroBody}</p>
+  </section>
+
+  <section class="section">
+    <h2>{c.howHeading}</h2>
+    <div class="how-steps">
+      {
+        c.steps.map((step, i) => (
+          <div class="card how-step">
+            <div class="how-step-num">{i + 1}</div>
+            <h3>{step.title}</h3>
+            <p>{step.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Live figure comes from /api/inflows; static shell SSR-renders fine. -->
+  <GoalTracker client:load lang={lang} />
+
+  <section id="donate" class="section">
+    <h2>{c.donateHeading}</h2>
+    <p style="color: var(--text-dim); max-width: 60ch;">{c.donateBody}</p>
+  </section>
+  <!-- client:only — DonationWidget pulls in `qrcode`, whose non-browser entry
+       breaks Astro's SSR/prerender pass if hydrated normally. -->
+  <DonationWidget client:only="react" lang={lang} />
+</Layout>
+
+<style>
+  .preview-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    margin: 0 0 16px;
+  }
+
+  .how-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .how-step h3 {
+    font-size: 16px;
+    margin: 12px 0 6px;
+  }
+
+  .how-step p {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .how-step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+  }
+</style>
